@@ -380,6 +380,16 @@ def ai_execution_engine():
 
     trade_quality = calculate_trade_quality_score(market_data)
 
+    quality_safety_warning = None
+
+    if trade_quality.get("trade_quality_score", 0) < 70:
+      quality_safety_warning = "TRADE_QUALITY_BELOW_70_OBSERVATION_ONLY"
+
+    quality_safety_warning = None
+
+    if trade_quality.get("trade_quality_score", 0) < 70:
+      quality_safety_warning = "TRADE_QUALITY_BELOW_70_OBSERVATION_ONLY"
+
     research_director_data = run_research_director()
 
     open_position_data = load_open_position()
@@ -447,6 +457,8 @@ def ai_execution_engine():
 
     "reason": live_signal.get("reason"),
 
+    "quality_safety_warning": quality_safety_warning,
+
         "market_regime": live_signal.get("market_regime"),
     "volatility_regime": live_signal.get("volatility_regime"),
     "preferred_strategies": live_signal.get("preferred_strategies", []),
@@ -468,6 +480,8 @@ def ai_execution_engine():
         "trade_analytics_reason",
         "Not available"
     ),
+
+    "quality_safety_warning": quality_safety_warning,
 
     "strategy_vote": live_signal.get(
         "strategy_vote",
