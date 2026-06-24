@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pandas
+yfinance
+ta
+python-dotenv
+textblob
+requests
