@@ -62,35 +62,10 @@ def save_entry_weights(weights):
 def update_entry_weights_after_replay(win_rate, average_return):
     weights = load_entry_weights()
 
-    decision = "KEEP"
-
-    if win_rate >= 46 and average_return >= 0.13:
-        weights["rsi_rising_bonus"] = min(
-            weights["rsi_rising_bonus"] + 1,
-            8
-        )
-        weights["extreme_rsi_penalty"] = max(
-            weights["extreme_rsi_penalty"] - 1,
-            -6
-        )
-        decision = "STRENGTHEN"
-
-    elif win_rate < 43 or average_return < 0.10:
-        weights["rsi_rising_bonus"] = max(
-            weights["rsi_rising_bonus"] - 1,
-            2
-        )
-        weights["extreme_rsi_penalty"] = min(
-            weights["extreme_rsi_penalty"] + 1,
-            -1
-        )
-        decision = "WEAKEN"
-
-    save_entry_weights(weights)
-
     return {
-        "decision": decision,
+        "decision": "LOCKED_BY_STAGE_26_TUNER",
         "entry_weights": weights,
         "win_rate": win_rate,
         "average_return": average_return,
+        "note": "Automatic replay weight changes are disabled. Stage 26 tuner controls entry weights."
     }

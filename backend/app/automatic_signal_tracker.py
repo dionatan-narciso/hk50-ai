@@ -134,11 +134,10 @@ def run_automatic_signal_tracker(
         }
 
     elif (
-        open_position is None
-        and signal in ["BUY", "SELL"]
-        and signal_changed
-        and allow_trade
-    ):
+    open_position is None
+    and signal in ["BUY", "SELL"]
+    and allow_trade
+):
         trade_context = calculate_trade_context(market_data)
 
         open_position = {
@@ -171,11 +170,10 @@ def run_automatic_signal_tracker(
         }
 
     elif (
-        open_position is None
-        and signal in ["BUY", "SELL"]
-        and signal_changed
-        and not allow_trade
-    ):
+    open_position is None
+    and signal in ["BUY", "SELL"]
+    and not allow_trade
+):
         trade_event = {
             "status": "blocked",
             "reason": risk_block_reason,

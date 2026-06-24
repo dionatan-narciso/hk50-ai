@@ -336,6 +336,7 @@ def automatic_signal_tracker():
         raw_signal=live_signal.get("raw_signal")
         or live_signal.get("raw_strategy_signal", "UNKNOWN"),
         quality=ai_execution_engine().get("position_size", {}).get("quality", "UNKNOWN"),
+        market_data=market_data,
     )
 
     return {
