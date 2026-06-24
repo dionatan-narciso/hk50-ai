@@ -55,7 +55,6 @@ from replay_winner_loser_analysis import analyze_winners_vs_losers
 from app.trade_context_analytics import get_trade_context_analytics
 
 from app.adaptive_entry_weight_tuner import tune_entry_weights
-from app.historical_replay_engine import run_historical_replay
 
 
 app = FastAPI()
@@ -124,9 +123,6 @@ def historical_replay():
 def home():
     return {"message": "HK50 AI Backend is running"}
   
-@app.get("/api/research-director")
-def research_director():
-    return run_research_director()
 
 @app.get("/api/trade-analytics")
 def trade_analytics():
@@ -310,7 +306,7 @@ def automatic_signal_tracker():
 
     active_strategy = live_signal.get("strategy_name", "Automatic Signal Tracker")
 
-    current_price = market_data.get("price", 0)
+    current_price = float(str(market_data.get("price", 0)).replace(",", ""))
     atr_percent = market_data.get("atr_percent", 1.5)
 
     def save_closed_trade_to_journal(trade):
