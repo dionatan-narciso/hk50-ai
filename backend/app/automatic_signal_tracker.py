@@ -122,6 +122,10 @@ def run_automatic_signal_tracker(
         allow_trade = False
         risk_block_reason = "BLOCKED_RAW_SIGNAL_HOLD"
 
+    if quality in ["WEAK", "MODERATE"]:
+        allow_trade = False
+        risk_block_reason = "BLOCKED_TRADE_QUALITY_BELOW_GOOD"
+
     if open_position is None and signal == "HOLD":
         trade_event = {
             "status": "no_trade",
