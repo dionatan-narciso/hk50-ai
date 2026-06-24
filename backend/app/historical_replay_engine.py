@@ -234,7 +234,12 @@ def run_ai_replay_decision(market_snapshot):
     }
 
 
-def run_historical_replay(period="1y", interval="1h", entry_weights_override=None):
+def run_historical_replay(
+    period="1y",
+    interval="1h",
+    entry_weights_override=None,
+    quality_threshold=None,
+):
     ensure_replay_folder()
     reset_replay_files()
 
@@ -316,6 +321,14 @@ def run_historical_replay(period="1y", interval="1h", entry_weights_override=Non
             })
 
             if adjusted_confidence <= 55:
+                blocked_by_learning += 1
+                previous_row = row
+                continue
+
+            if (
+                quality_threshold is not None
+                and trade_quality["trade_quality_score"] < quality_threshold
+            ):
                 blocked_by_learning += 1
                 previous_row = row
                 continue

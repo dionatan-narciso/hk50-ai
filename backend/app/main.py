@@ -56,6 +56,10 @@ from app.trade_context_analytics import get_trade_context_analytics
 
 from app.adaptive_entry_weight_tuner import tune_entry_weights
 
+from app.trade_quality_analytics import get_trade_quality_analytics
+
+from app.quality_threshold_optimizer import optimize_quality_threshold
+
 
 app = FastAPI()
 
@@ -87,6 +91,14 @@ def replay_penalty_test(
 def replay_exit_reason_analysis():
     return analyze_replay_exit_reasons()
 
+@app.get("/api/quality-threshold-optimizer")
+def quality_threshold_optimizer():
+    return optimize_quality_threshold()
+
+@app.get("/api/trade-quality-analytics")
+def trade_quality_analytics():
+    return get_trade_quality_analytics()
+
 @app.get("/api/adaptive-entry-weight-tuner")
 def adaptive_entry_weight_tuner():
     return tune_entry_weights(run_historical_replay)
@@ -117,7 +129,11 @@ def historical_replay_summary():
 
 @app.get("/api/historical-replay")
 def historical_replay():
-    return run_historical_replay(period="1y", interval="1h")
+    return run_historical_replay(
+        period="1y",
+        interval="1h",
+        quality_threshold=70
+    )
 
 @app.get("/")
 def home():
