@@ -60,6 +60,9 @@ from app.trade_quality_analytics import get_trade_quality_analytics
 
 from app.quality_threshold_optimizer import optimize_quality_threshold
 
+from app.trade_quality_score import calculate_trade_quality_score
+from app.utils.trade_context import calculate_trade_context
+
 
 app = FastAPI()
 
@@ -320,6 +323,11 @@ def automatic_signal_tracker():
     market_data = market_summary()
     live_signal = generate_live_signal(market_data)
 
+    trade_context = calculate_trade_context(market_data)
+    market_data.update(trade_context)
+
+    trade_quality = calculate_trade_quality_score(market_data)
+
     active_strategy = live_signal.get("strategy_name", "Automatic Signal Tracker")
 
     current_price = float(str(market_data.get("price", 0)).replace(",", ""))
@@ -351,13 +359,14 @@ def automatic_signal_tracker():
         total_votes=live_signal.get("total_votes", 0),
         raw_signal=live_signal.get("raw_signal")
         or live_signal.get("raw_strategy_signal", "UNKNOWN"),
-        quality=ai_execution_engine().get("position_size", {}).get("quality", "UNKNOWN"),
+        quality=trade_quality.get("trade_quality_label", "UNKNOWN"),
         market_data=market_data,
     )
 
     return {
         "market_data": market_data,
         "live_signal": live_signal,
+        "trade_quality": trade_quality,
         "tracker_result": tracker_result
     }
 
@@ -365,6 +374,11 @@ def automatic_signal_tracker():
 def ai_execution_engine():
     market_data = market_summary()
     live_signal = generate_live_signal(market_data)
+
+    trade_context = calculate_trade_context(market_data)
+    market_data.update(trade_context)
+
+    trade_quality = calculate_trade_quality_score(market_data)
 
     research_director_data = run_research_director()
 
@@ -416,6 +430,10 @@ def ai_execution_engine():
         "quality_analytics_reason",
         "No quality learning data yet"
     ),
+
+    "trade_quality_score": trade_quality.get("trade_quality_score"),
+    "trade_quality_label": trade_quality.get("trade_quality_label"),
+    "trade_quality_reasons": trade_quality.get("trade_quality_reasons", []),
 
     "strategy_performance_bonus": live_signal.get(
         "strategy_performance_bonus",
