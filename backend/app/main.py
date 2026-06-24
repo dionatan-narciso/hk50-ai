@@ -328,6 +328,11 @@ def automatic_signal_tracker():
 
     trade_quality = calculate_trade_quality_score(market_data)
 
+    quality_safety_warning = None
+
+    if trade_quality.get("trade_quality_score", 0) < 70:
+      quality_safety_warning = "TRADE_QUALITY_BELOW_70_OBSERVATION_ONLY"
+
     active_strategy = live_signal.get("strategy_name", "Automatic Signal Tracker")
 
     current_price = float(str(market_data.get("price", 0)).replace(",", ""))
@@ -383,12 +388,7 @@ def ai_execution_engine():
     quality_safety_warning = None
 
     if trade_quality.get("trade_quality_score", 0) < 70:
-      quality_safety_warning = "TRADE_QUALITY_BELOW_70_OBSERVATION_ONLY"
-
-    quality_safety_warning = None
-
-    if trade_quality.get("trade_quality_score", 0) < 70:
-      quality_safety_warning = "TRADE_QUALITY_BELOW_70_OBSERVATION_ONLY"
+        quality_safety_warning = "TRADE_QUALITY_BELOW_70_OBSERVATION_ONLY"
 
     research_director_data = run_research_director()
 
