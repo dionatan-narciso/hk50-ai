@@ -431,6 +431,60 @@ def run_historical_replay(period="1y", interval="1h", entry_weights_override=Non
 
         previous_row = row
 
+    if open_position is not None:
+        final_row = df.iloc[-1]
+        final_price = float(final_row["Close"])
+
+        entry_price = float(open_position["entry_price"])
+        trade_signal = open_position["signal"]
+
+        move_percent = ((final_price - entry_price) / entry_price) * 100
+
+        if trade_signal == "SELL":
+            move_percent *= -1
+
+        trade = {
+            "strategy": open_position["strategy"],
+            "original_strategy": open_position.get("original_strategy"),
+            "signal": trade_signal,
+            "entry_price": round(entry_price, 3),
+            "exit_price": round(final_price, 3),
+            "return_percent": round(move_percent, 3),
+            "result": "REPLAY_END_FORCED_CLOSE",
+            "confidence": open_position["confidence"],
+            "original_confidence": open_position.get("original_confidence"),
+            "replay_learning_adjustment": open_position.get("replay_learning_adjustment"),
+            "replay_learning_reasons": open_position.get("replay_learning_reasons"),
+            "opened_at": open_position["opened_at"],
+            "closed_at": str(df.index[-1]),
+            "atr_percent_at_entry": round(open_position["atr_percent_at_entry"], 3),
+            "peak_profit_percent": round(open_position.get("peak_profit_percent", 0), 3),
+            "market_regime": open_position["market_regime"],
+            "volatility_regime": open_position["volatility_regime"],
+            "rotation_changed": open_position.get("rotation_changed", False),
+            "rotation_reason": open_position.get("rotation_reason"),
+            "strategy_reason": open_position.get("strategy_reason"),
+            "trailing_activation": open_position.get("trailing_activation"),
+            "trailing_pullback": open_position.get("trailing_pullback"),
+            "adaptive_stop_loss": open_position.get("adaptive_stop_loss"),
+            "rsi_at_entry": open_position.get("rsi_at_entry"),
+            "trend_at_entry": open_position.get("trend_at_entry"),
+            "risk_at_entry": open_position.get("risk_at_entry"),
+            "close_at_entry": open_position.get("close_at_entry"),
+            "ma20_at_entry": open_position.get("ma20_at_entry"),
+            "ma50_at_entry": open_position.get("ma50_at_entry"),
+            "distance_ma20": open_position.get("distance_ma20"),
+            "distance_ma50": open_position.get("distance_ma50"),
+            "previous_candle_return": open_position.get("previous_candle_return"),
+            "trend_strength": open_position.get("trend_strength"),
+            "ma_alignment": open_position.get("ma_alignment"),
+            "rsi_slope": open_position.get("rsi_slope"),
+        }
+
+        save_replay_trade(trade)
+        trades.append(trade)
+        open_position = None
+
     total_trades = len(trades)
     wins = len([t for t in trades if t["return_percent"] > 0])
     losses = len([t for t in trades if t["return_percent"] <= 0])
