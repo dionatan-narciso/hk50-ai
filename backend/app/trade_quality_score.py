@@ -40,8 +40,8 @@ def calculate_trade_quality_score(market_snapshot, entry_context_score=None):
         reasons.append("Bullish trend supports entry")
 
     elif trend == "Bearish":
-        score -= 5
-        reasons.append("Bearish trend reduces entry quality")
+        score -= 2
+        reasons.append("Bearish trend slightly reduces entry quality")
 
     if risk == "Low":
         score += 8
