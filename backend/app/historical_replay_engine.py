@@ -13,6 +13,8 @@ from app.entry_context_scoring import calculate_entry_context_score
 
 from app.entry_learning_memory import (update_entry_weights_after_replay)
 
+from app.trade_quality_score import calculate_trade_quality_score
+
 
 REPLAY_DIR = "data/replay"
 REPLAY_TRADES_FILE = f"{REPLAY_DIR}/replay_trade_journal.csv"
@@ -286,6 +288,11 @@ def run_historical_replay(period="1y", interval="1h", entry_weights_override=Non
                 entry_weights_override=entry_weights_override
             )
 
+            trade_quality = calculate_trade_quality_score(
+    market_snapshot,
+    entry_context_score=entry_context_score
+)
+
             adjusted_confidence = max(
                 0,
                 min(
@@ -328,7 +335,13 @@ def run_historical_replay(period="1y", interval="1h", entry_weights_override=Non
                 "replay_learning_adjustment": replay_learning_adjustment,
                 "replay_learning_reasons": " | ".join(penalty.get("reasons", [])),
                 "entry_context_adjustment": entry_context_score.get("entry_context_adjustment", 0),
+                "trade_quality_score": trade_quality.get("trade_quality_score"),
+                "trade_quality_label": trade_quality.get("trade_quality_label"),
+                "trade_quality_reasons": " | ".join(trade_quality.get("trade_quality_reasons", [])),
                 "entry_context_reasons": " | ".join(entry_context_score.get("entry_context_reasons", [])),
+                "trade_quality_score": trade_quality.get("trade_quality_score"),
+                "trade_quality_label": trade_quality.get("trade_quality_label"),
+                "trade_quality_reasons": " | ".join(trade_quality.get("trade_quality_reasons", [])),
                 "rotation_changed": rotation_changed,
                 "rotation_reason": decision.get("rotation_reason"),
                 "strategy_reason": decision.get("reason"),
@@ -409,6 +422,9 @@ def run_historical_replay(period="1y", interval="1h", entry_weights_override=Non
                     "trailing_pullback": open_position.get("trailing_pullback"),
                     "adaptive_stop_loss": open_position.get("adaptive_stop_loss"),
                     "rsi_at_entry": open_position.get("rsi_at_entry"),
+                    "trade_quality_score": open_position.get("trade_quality_score"),
+                    "trade_quality_label": open_position.get("trade_quality_label"),
+                    "trade_quality_reasons": open_position.get("trade_quality_reasons"),
                     "trend_at_entry": open_position.get("trend_at_entry"),
                     "risk_at_entry": open_position.get("risk_at_entry"),
 
@@ -470,6 +486,9 @@ def run_historical_replay(period="1y", interval="1h", entry_weights_override=Non
             "rsi_at_entry": open_position.get("rsi_at_entry"),
             "trend_at_entry": open_position.get("trend_at_entry"),
             "risk_at_entry": open_position.get("risk_at_entry"),
+            "trade_quality_score": open_position.get("trade_quality_score"),
+            "trade_quality_label": open_position.get("trade_quality_label"),
+            "trade_quality_reasons": open_position.get("trade_quality_reasons"),
             "close_at_entry": open_position.get("close_at_entry"),
             "ma20_at_entry": open_position.get("ma20_at_entry"),
             "ma50_at_entry": open_position.get("ma50_at_entry"),
