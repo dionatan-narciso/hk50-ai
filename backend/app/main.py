@@ -369,11 +369,12 @@ def automatic_signal_tracker():
     )
 
     return {
-        "market_data": market_data,
-        "live_signal": live_signal,
-        "trade_quality": trade_quality,
-        "tracker_result": tracker_result
-    }
+    "market_data": market_data,
+    "live_signal": live_signal,
+    "trade_quality": trade_quality,
+    "quality_safety_warning": quality_safety_warning,
+    "tracker_result": tracker_result
+}
 
 @app.get("/api/ai-execution-engine")
 def ai_execution_engine():
