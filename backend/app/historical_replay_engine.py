@@ -17,6 +17,8 @@ from app.trade_quality_score import calculate_trade_quality_score
 
 from app.support_resistance_engine import analyse_support_resistance
 
+from app.support_resistance_learning_memory import get_learned_sr_weight
+
 REPLAY_DIR = "data/replay"
 REPLAY_TRADES_FILE = f"{REPLAY_DIR}/replay_trade_journal.csv"
 
@@ -308,6 +310,51 @@ def calculate_support_resistance_replay_adjustment(market_snapshot):
         "support_resistance_reasons": reasons,
     }
 
+def calculate_learned_support_resistance_adjustment(market_snapshot, base_adjustment):
+    learned_adjustment = 0
+    reasons = []
+
+    conditions = [
+        (
+            "support_resistance_status",
+            market_snapshot.get("support_resistance_status")
+        ),
+        (
+            "support_strength",
+            market_snapshot.get("support_strength")
+        ),
+        (
+            "resistance_strength",
+            market_snapshot.get("resistance_strength")
+        ),
+        (
+            "support_resistance_adjustment",
+            base_adjustment
+        ),
+    ]
+
+    for condition_type, condition_value in conditions:
+        if condition_value is None:
+            continue
+
+        weight = get_learned_sr_weight(
+            condition_type=condition_type,
+            condition_value=condition_value
+        )
+
+        if weight != 0:
+            learned_adjustment += weight
+            reasons.append(
+                f"{condition_type}={condition_value} learned weight {weight}"
+            )
+
+    learned_adjustment = max(-8, min(8, learned_adjustment))
+
+    return {
+        "learned_support_resistance_adjustment": learned_adjustment,
+        "learned_support_resistance_reasons": reasons,
+    }
+
 def run_historical_replay(
     period="1y",
     interval="1h",
@@ -383,8 +430,18 @@ def run_historical_replay(
             )
 
             support_resistance_score = calculate_support_resistance_replay_adjustment(
-                market_snapshot
+            market_snapshot
+        )
+
+            learned_support_resistance_score = (
+            calculate_learned_support_resistance_adjustment(
+                market_snapshot=market_snapshot,
+                base_adjustment=support_resistance_score.get(
+                    "support_resistance_adjustment",
+                    0
+                )
             )
+        )
 
             trade_quality = calculate_trade_quality_score(
                 market_snapshot,
@@ -399,6 +456,10 @@ def run_historical_replay(
                 + replay_learning_adjustment
                 + entry_context_score.get("entry_context_adjustment", 0)
                 + support_resistance_score.get("support_resistance_adjustment", 0)
+                + learned_support_resistance_score.get(
+                    "learned_support_resistance_adjustment",
+                    0
+                )
                )
              )
 
@@ -414,11 +475,20 @@ def run_historical_replay(
                     "support_resistance_adjustment",
                     0
                 ),
+                "learned_support_resistance_adjustment": learned_support_resistance_score.get(
+                    "learned_support_resistance_adjustment",
+                    0
+                ),
                 "adjusted_confidence": adjusted_confidence,
                 "threshold": 55
             })
 
             if adjusted_confidence <= 55:
+                blocked_by_learning += 1
+                previous_row = row
+                continue
+
+            if support_resistance_score.get("support_resistance_adjustment", 0) <= -3:
                 blocked_by_learning += 1
                 previous_row = row
                 continue
@@ -453,6 +523,16 @@ def run_historical_replay(
                 "support_resistance_reasons": " | ".join(
                     support_resistance_score.get("support_resistance_reasons", [])
                 ),
+                "learned_support_resistance_adjustment": learned_support_resistance_score.get(
+                "learned_support_resistance_adjustment",
+                0
+            ),
+                "learned_support_resistance_reasons": " | ".join(
+                learned_support_resistance_score.get(
+                    "learned_support_resistance_reasons",
+                    []
+                )
+            ),
                 "trade_quality_score": trade_quality.get("trade_quality_score"),
                 "trade_quality_label": trade_quality.get("trade_quality_label"),
                 "trade_quality_reasons": " | ".join(trade_quality.get("trade_quality_reasons", [])),
@@ -534,9 +614,15 @@ def run_historical_replay(
                     "support_resistance_adjustment": open_position.get(
                     "support_resistance_adjustment"
                 ),
-                   "support_resistance_reasons": open_position.get(
+                    "support_resistance_reasons": open_position.get(
                     "support_resistance_reasons"
                 ),
+                    "learned_support_resistance_adjustment": open_position.get(
+                    "learned_support_resistance_adjustment"
+                    ),
+                    "learned_support_resistance_reasons": open_position.get(
+                        "learned_support_resistance_reasons"
+                    ),
                     "opened_at": open_position["opened_at"],
                     "closed_at": str(timestamp),
                     "atr_percent_at_entry": round(

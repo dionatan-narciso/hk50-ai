@@ -1,6 +1,10 @@
 import os
 import pandas as pd
 
+from app.support_resistance_learning_memory import (
+    build_support_resistance_learning_memory
+)
+
 REPLAY_JOURNAL = "data/replay/replay_trade_journal.csv"
 
 
@@ -133,9 +137,14 @@ def get_replay_analytics():
             "resistance_strength"
         ),
         "support_resistance_adjustment_summary": _summarise_group(
-        df,
-        "support_resistance_adjustment"
+            df,
+            "support_resistance_adjustment"
         ),
+        "learned_support_resistance_adjustment_summary": _summarise_group(
+            df,
+            "learned_support_resistance_adjustment"
+        ),
+        "support_resistance_learning_memory": build_support_resistance_learning_memory(),
     }
 
     return analytics
