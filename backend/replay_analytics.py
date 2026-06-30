@@ -140,12 +140,6 @@ def get_replay_analytics():
             df,
             "support_resistance_adjustment"
         ),
-        "learned_support_resistance_adjustment": open_position.get(
-        "learned_support_resistance_adjustment"
-    ),
-        "learned_support_resistance_reasons": open_position.get(
-        "learned_support_resistance_reasons"
-    ),
         "learned_support_resistance_adjustment_summary": _summarise_group(
             df,
             "learned_support_resistance_adjustment"

@@ -620,6 +620,12 @@ def run_historical_replay(
                     "learned_support_resistance_adjustment": open_position.get(
                     "learned_support_resistance_adjustment"
                     ),
+                    "learned_support_resistance_adjustment": open_position.get(
+                    "learned_support_resistance_adjustment"
+                ),
+                    "learned_support_resistance_reasons": open_position.get(
+                    "learned_support_resistance_reasons"
+                ),
                     "learned_support_resistance_reasons": open_position.get(
                         "learned_support_resistance_reasons"
                     ),
