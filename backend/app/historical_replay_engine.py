@@ -493,6 +493,14 @@ def run_historical_replay(
                 previous_row = row
                 continue
 
+            if learned_support_resistance_score.get(
+                "learned_support_resistance_adjustment",
+                0
+            ) <= -2:
+                blocked_by_learning += 1
+                previous_row = row
+                continue
+
             if (
                 quality_threshold is not None
                 and trade_quality["trade_quality_score"] < quality_threshold
