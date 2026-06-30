@@ -615,20 +615,17 @@ def run_historical_replay(
                     "support_resistance_adjustment"
                 ),
                     "support_resistance_reasons": open_position.get(
-                    "support_resistance_reasons"
-                ),
-                    "learned_support_resistance_adjustment": open_position.get(
-                    "learned_support_resistance_adjustment"
+                        "support_resistance_reasons"
+
+                    
                     ),
                     "learned_support_resistance_adjustment": open_position.get(
-                    "learned_support_resistance_adjustment"
-                ),
-                    "learned_support_resistance_reasons": open_position.get(
-                    "learned_support_resistance_reasons"
-                ),
+                        "learned_support_resistance_adjustment"
+                    ),
                     "learned_support_resistance_reasons": open_position.get(
                         "learned_support_resistance_reasons"
                     ),
+                    
                     "opened_at": open_position["opened_at"],
                     "closed_at": str(timestamp),
                     "atr_percent_at_entry": round(
@@ -707,6 +704,12 @@ def run_historical_replay(
            "support_resistance_reasons": open_position.get(
             "support_resistance_reasons"
         ),
+        "learned_support_resistance_adjustment": open_position.get(
+    "learned_support_resistance_adjustment"
+),
+"learned_support_resistance_reasons": open_position.get(
+    "learned_support_resistance_reasons"
+),
             "opened_at": open_position["opened_at"],
             "closed_at": str(df.index[-1]),
             "atr_percent_at_entry": round(open_position["atr_percent_at_entry"], 3),
