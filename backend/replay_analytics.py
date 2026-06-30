@@ -132,6 +132,10 @@ def get_replay_analytics():
             df,
             "resistance_strength"
         ),
+        "support_resistance_adjustment_summary": _summarise_group(
+        df,
+        "support_resistance_adjustment"
+        ),
     }
 
     return analytics
