@@ -544,6 +544,18 @@ def ai_execution_engine():
         if open_position_data
         else False
     ),
+
+    "support_resistance_bonus": live_signal.get("support_resistance_bonus", 0),
+"support_resistance_reason": live_signal.get(
+    "support_resistance_reason",
+    "Not available"
+),
+"support_resistance_status": live_signal.get(
+    "support_resistance_status",
+    "UNKNOWN"
+),
+"distance_to_support": live_signal.get("distance_to_support"),
+"distance_to_resistance": live_signal.get("distance_to_resistance"),
 }
 
 @app.get("/api/live-performance-memory")

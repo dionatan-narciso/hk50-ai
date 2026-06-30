@@ -15,6 +15,7 @@ from app.entry_learning_memory import (update_entry_weights_after_replay)
 
 from app.trade_quality_score import calculate_trade_quality_score
 
+from app.support_resistance_engine import analyse_support_resistance
 
 REPLAY_DIR = "data/replay"
 REPLAY_TRADES_FILE = f"{REPLAY_DIR}/replay_trade_journal.csv"
@@ -167,7 +168,7 @@ def calculate_replay_confidence(row):
     return max(0, min(100, round(confidence)))
 
 
-def build_market_snapshot(row, previous_row=None):
+def build_market_snapshot(row, previous_row=None, recent_candles=None):
     price = float(row["Close"])
     atr_percent = float(row["ATR_PERCENT"])
 
@@ -183,6 +184,14 @@ def build_market_snapshot(row, previous_row=None):
         else float(row["RSI"])
     )
 
+    support_resistance = {}
+
+    if recent_candles:
+        support_resistance = analyse_support_resistance(
+            candles=recent_candles,
+            current_price=price
+        )
+
     return {
         "price": price,
         "close": price,
@@ -195,8 +204,19 @@ def build_market_snapshot(row, previous_row=None):
         "trend": classify_trend(row),
         "risk": classify_risk(atr_percent),
         "confidence": calculate_replay_confidence(row),
-    }
 
+        "support_resistance": support_resistance,
+        "nearest_support": support_resistance.get("nearest_support"),
+        "support_strength": support_resistance.get("support_strength"),
+        "nearest_resistance": support_resistance.get("nearest_resistance"),
+        "resistance_strength": support_resistance.get("resistance_strength"),
+        "distance_to_support": support_resistance.get("distance_to_support"),
+        "distance_to_resistance": support_resistance.get("distance_to_resistance"),
+        "support_resistance_status": support_resistance.get(
+            "support_resistance_status",
+            "UNKNOWN"
+        ),
+    }
 
 def run_ai_replay_decision(market_snapshot):
     research_context = get_replay_research_context()
@@ -257,22 +277,23 @@ def run_historical_replay(
 
     previous_row = None
 
-    for timestamp, row in df.iterrows():
-        market_snapshot = build_market_snapshot(row, previous_row)
-        price = market_snapshot["price"]
-        atr_percent = market_snapshot["atr_percent"]
+    for index_position, (timestamp, row) in enumerate(df.iterrows()):
+        recent_df = df.iloc[max(0, index_position - 80):index_position + 1]
 
-        decision = run_ai_replay_decision(market_snapshot)
+        recent_candles = []
 
-        signal = decision.get("signal", "HOLD")
-        strategy = decision.get("strategy", "UNKNOWN")
-        confidence = market_snapshot.get("confidence", 56)
+        for _, candle in recent_df.iterrows():
+            recent_candles.append({
+                "high": float(candle["High"]),
+                "low": float(candle["Low"]),
+                "close": float(candle["Close"]),
+            })
 
-        market_regime = decision.get("market_regime", "UNKNOWN")
-        volatility_regime = decision.get("volatility_regime", "UNKNOWN")
-        rotation_changed = decision.get("rotation_changed", False)
-
-        settings = get_adaptive_replay_settings(atr_percent)
+        market_snapshot = build_market_snapshot(
+            row=row,
+            previous_row=previous_row,
+            recent_candles=recent_candles
+        )
 
         if open_position is None and signal in ["BUY", "SELL"]:
 
@@ -364,6 +385,13 @@ def run_historical_replay(
                 "rsi_at_entry": market_snapshot.get("rsi"),
                 "trend_at_entry": market_snapshot.get("trend"),
                 "risk_at_entry": market_snapshot.get("risk"),
+                "support_resistance_status": market_snapshot.get("support_resistance_status"),
+                "nearest_support": market_snapshot.get("nearest_support"),
+                "nearest_resistance": market_snapshot.get("nearest_resistance"),
+                "distance_to_support": market_snapshot.get("distance_to_support"),
+                "distance_to_resistance": market_snapshot.get("distance_to_resistance"),
+                "support_strength": market_snapshot.get("support_strength"),
+                "resistance_strength": market_snapshot.get("resistance_strength"),
                 **trade_context,
             }
 
@@ -439,8 +467,15 @@ def run_historical_replay(
                     "trade_quality_label": open_position.get("trade_quality_label"),
                     "trade_quality_reasons": open_position.get("trade_quality_reasons"),
                     "trend_at_entry": open_position.get("trend_at_entry"),
-                    "risk_at_entry": open_position.get("risk_at_entry"),
-
+                    
+                    "support_resistance_status": open_position.get("support_resistance_status"),
+                    "nearest_support": open_position.get("nearest_support"),
+                    "nearest_resistance": open_position.get("nearest_resistance"),
+                    "distance_to_support": open_position.get("distance_to_support"),
+                    "distance_to_resistance": open_position.get("distance_to_resistance"),
+                    "support_strength": open_position.get("support_strength"),
+                    "resistance_strength": open_position.get("resistance_strength"),
+                    
                     "close_at_entry": open_position.get("close_at_entry"),
                     "ma20_at_entry": open_position.get("ma20_at_entry"),
                     "ma50_at_entry": open_position.get("ma50_at_entry"),
