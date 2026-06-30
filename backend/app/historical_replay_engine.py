@@ -253,6 +253,60 @@ def run_ai_replay_decision(market_snapshot):
         "rotation_scores": rotation_result.get("rotation_scores", []),
     }
 
+def calculate_support_resistance_replay_adjustment(market_snapshot):
+    distance_to_support = market_snapshot.get("distance_to_support")
+    distance_to_resistance = market_snapshot.get("distance_to_resistance")
+
+    adjustment = 0
+    reasons = []
+
+    try:
+        distance_to_support = (
+            float(distance_to_support)
+            if distance_to_support is not None
+            else None
+        )
+    except Exception:
+        distance_to_support = None
+
+    try:
+        distance_to_resistance = (
+            float(distance_to_resistance)
+            if distance_to_resistance is not None
+            else None
+        )
+    except Exception:
+        distance_to_resistance = None
+
+    if distance_to_resistance is not None:
+        if distance_to_resistance >= 2.0:
+            adjustment += 4
+            reasons.append("Distance to resistance 2%+ bonus +4")
+        elif distance_to_resistance <= 0.25:
+            adjustment -= 5
+            reasons.append("Very close to resistance penalty -5")
+        elif distance_to_resistance <= 0.50:
+            adjustment -= 2
+            reasons.append("Close to resistance penalty -2")
+
+    if distance_to_support is not None:
+        if 0.25 <= distance_to_support <= 0.50:
+            adjustment += 3
+            reasons.append("Healthy distance above support bonus +3")
+        elif 0.50 < distance_to_support <= 1.00:
+            adjustment += 2
+            reasons.append("Moderate distance above support bonus +2")
+        elif distance_to_support <= 0.25:
+            adjustment -= 2
+            reasons.append("Too close to support penalty -2")
+        elif 1.00 < distance_to_support <= 2.00:
+            adjustment -= 4
+            reasons.append("Weak support distance penalty -4")
+
+    return {
+        "support_resistance_adjustment": adjustment,
+        "support_resistance_reasons": reasons,
+    }
 
 def run_historical_replay(
     period="1y",
@@ -288,12 +342,26 @@ def run_historical_replay(
                 "low": float(candle["Low"]),
                 "close": float(candle["Close"]),
             })
-
         market_snapshot = build_market_snapshot(
             row=row,
             previous_row=previous_row,
             recent_candles=recent_candles
         )
+
+        price = market_snapshot["price"]
+        atr_percent = market_snapshot["atr_percent"]
+
+        decision = run_ai_replay_decision(market_snapshot)
+
+        signal = decision.get("signal", "HOLD")
+        strategy = decision.get("strategy", "UNKNOWN")
+        confidence = market_snapshot.get("confidence", 56)
+
+        market_regime = decision.get("market_regime", "UNKNOWN")
+        volatility_regime = decision.get("volatility_regime", "UNKNOWN")
+        rotation_changed = decision.get("rotation_changed", False)
+
+        settings = get_adaptive_replay_settings(atr_percent)
 
         if open_position is None and signal in ["BUY", "SELL"]:
 
@@ -314,20 +382,25 @@ def run_historical_replay(
                 entry_weights_override=entry_weights_override
             )
 
+            support_resistance_score = calculate_support_resistance_replay_adjustment(
+                market_snapshot
+            )
+
             trade_quality = calculate_trade_quality_score(
-    market_snapshot,
-    entry_context_score=entry_context_score
-)
+                market_snapshot,
+                entry_context_score=entry_context_score
+            )
 
             adjusted_confidence = max(
                 0,
                 min(
                     100,
-                    confidence
-                    + replay_learning_adjustment
-                    + entry_context_score.get("entry_context_adjustment", 0)
-                )
-            )
+                confidence
+                + replay_learning_adjustment
+                + entry_context_score.get("entry_context_adjustment", 0)
+                + support_resistance_score.get("support_resistance_adjustment", 0)
+               )
+             )
 
             print("REPLAY DEBUG:", {
                 "strategy": strategy,
@@ -335,6 +408,10 @@ def run_historical_replay(
                 "adjustment": replay_learning_adjustment,
                 "entry_context_adjustment": entry_context_score.get(
                     "entry_context_adjustment",
+                    0
+                ),
+                "support_resistance_adjustment": support_resistance_score.get(
+                    "support_resistance_adjustment",
                     0
                 ),
                 "adjusted_confidence": adjusted_confidence,
@@ -369,6 +446,13 @@ def run_historical_replay(
                 "replay_learning_adjustment": replay_learning_adjustment,
                 "replay_learning_reasons": " | ".join(penalty.get("reasons", [])),
                 "entry_context_adjustment": entry_context_score.get("entry_context_adjustment", 0),
+                "support_resistance_adjustment": support_resistance_score.get(
+                "support_resistance_adjustment",
+                0
+                ),
+                "support_resistance_reasons": " | ".join(
+                    support_resistance_score.get("support_resistance_reasons", [])
+                ),
                 "trade_quality_score": trade_quality.get("trade_quality_score"),
                 "trade_quality_label": trade_quality.get("trade_quality_label"),
                 "trade_quality_reasons": " | ".join(trade_quality.get("trade_quality_reasons", [])),
@@ -447,6 +531,12 @@ def run_historical_replay(
                     "replay_learning_reasons": open_position.get(
                         "replay_learning_reasons"
                     ),
+                    "support_resistance_adjustment": open_position.get(
+                    "support_resistance_adjustment"
+                ),
+                   "support_resistance_reasons": open_position.get(
+                    "support_resistance_reasons"
+                ),
                     "opened_at": open_position["opened_at"],
                     "closed_at": str(timestamp),
                     "atr_percent_at_entry": round(
@@ -518,7 +608,13 @@ def run_historical_replay(
             "confidence": open_position["confidence"],
             "original_confidence": open_position.get("original_confidence"),
             "replay_learning_adjustment": open_position.get("replay_learning_adjustment"),
-            "replay_learning_reasons": open_position.get("replay_learning_reasons"),
+            
+            "support_resistance_adjustment": open_position.get(
+            "support_resistance_adjustment"
+        ),
+           "support_resistance_reasons": open_position.get(
+            "support_resistance_reasons"
+        ),
             "opened_at": open_position["opened_at"],
             "closed_at": str(df.index[-1]),
             "atr_percent_at_entry": round(open_position["atr_percent_at_entry"], 3),
