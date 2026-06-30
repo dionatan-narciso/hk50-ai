@@ -63,6 +63,8 @@ from app.quality_threshold_optimizer import optimize_quality_threshold
 from app.trade_quality_score import calculate_trade_quality_score
 from app.utils.trade_context import calculate_trade_context
 
+from app.support_resistance_engine import analyse_support_resistance
+
 
 app = FastAPI()
 
@@ -184,6 +186,20 @@ def market_summary():
             2,
         )
 
+        sr_candles = []
+
+        for index, row in data.tail(80).iterrows():
+            sr_candles.append({
+                "high": round(row["High"], 2),
+                "low": round(row["Low"], 2),
+                "close": round(row["Close"], 2),
+            })
+
+        support_resistance = analyse_support_resistance(
+            candles=sr_candles,
+            current_price=current_price
+        )
+
         atr_percent = round((atr / current_price) * 100, 2)
 
         trend = "Bullish" if current_price > ma20 > ma50 else "Bearish"
@@ -215,7 +231,15 @@ def market_summary():
             "rsi": rsi,
             "ma20": f"{ma20:,.2f}",
             "ma50": f"{ma50:,.2f}",
-            "atr_percent": atr_percent,
+            
+            "support_resistance": support_resistance,
+            "nearest_support": support_resistance.get("nearest_support"),
+            "support_strength": support_resistance.get("support_strength"),
+            "nearest_resistance": support_resistance.get("nearest_resistance"),
+            "resistance_strength": support_resistance.get("resistance_strength"),
+            "distance_to_support": support_resistance.get("distance_to_support"),
+            "distance_to_resistance": support_resistance.get("distance_to_resistance"),
+            "support_resistance_status": support_resistance.get("support_resistance_status"),
         }
 
     except Exception as e:

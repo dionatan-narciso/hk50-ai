@@ -274,6 +274,17 @@ def generate_research_driven_signal(market_data, research_context):
         min(100, combined_confidence + quality_analytics_bonus)
     )
 
+    support_resistance_result = apply_support_resistance_confidence(
+        signal=final_signal,
+        confidence=combined_confidence,
+        market_data=market_data
+    )
+
+    combined_confidence = support_resistance_result.get(
+        "confidence",
+        combined_confidence
+    )
+
     final_quality = get_quality_from_confidence(combined_confidence)
 
     reason = (
@@ -291,6 +302,7 @@ def generate_research_driven_signal(market_data, research_context):
         f'Regime analytics: {regime_bonus_result.get("reason")} '
         f'Quality analytics: {quality_analytics.get("reason")} '
         f'Confidence calibration: {confidence_calibration_result.get("reason")} '
+        f'Support/resistance: {support_resistance_result.get("support_resistance_reason")} '
     )
 
     return {
@@ -339,6 +351,84 @@ def generate_research_driven_signal(market_data, research_context):
         "quality_before_analytics": quality,
         "quality_analytics_bonus": quality_analytics_bonus,
         "quality_analytics_reason": quality_analytics.get("reason"),
+
+        "support_resistance_bonus": support_resistance_result.get(
+            "support_resistance_bonus"
+        ),
+        "support_resistance_reason": support_resistance_result.get(
+            "support_resistance_reason"
+        ),
+        "support_resistance_status": support_resistance_result.get(
+            "support_resistance_status"
+        ),
+        "distance_to_support": support_resistance_result.get(
+            "distance_to_support"
+        ),
+        "distance_to_resistance": support_resistance_result.get(
+            "distance_to_resistance"
+        ),
+    }
+
+def apply_support_resistance_confidence(signal, confidence, market_data):
+    support_resistance = market_data.get("support_resistance", {})
+
+    status = support_resistance.get(
+        "support_resistance_status",
+        market_data.get("support_resistance_status", "UNKNOWN")
+    )
+
+    distance_to_support = support_resistance.get(
+        "distance_to_support",
+        market_data.get("distance_to_support")
+    )
+
+    distance_to_resistance = support_resistance.get(
+        "distance_to_resistance",
+        market_data.get("distance_to_resistance")
+    )
+
+    adjustment = 0
+    reason = "Support/resistance made no confidence change."
+
+    if signal == "BUY":
+        if status == "NEAR_SUPPORT":
+            adjustment += 5
+            reason = "BUY is near support. Confidence increased."
+
+        elif status == "NEAR_RESISTANCE":
+            adjustment -= 5
+            reason = "BUY is near resistance. Confidence reduced."
+
+        elif status == "BELOW_RECENT_SUPPORT":
+            adjustment -= 6
+            reason = "BUY is below recent broken support. Confidence reduced."
+
+    elif signal == "SELL":
+        if status == "NEAR_RESISTANCE":
+            adjustment += 5
+            reason = "SELL is near resistance. Confidence increased."
+
+        elif status == "NEAR_SUPPORT":
+            adjustment -= 5
+            reason = "SELL is near support. Confidence reduced."
+
+        elif status == "BELOW_RECENT_SUPPORT":
+            adjustment += 3
+            reason = "SELL is below recent support. Bearish context increased confidence."
+
+    if status == "COMPRESSED_BETWEEN_LEVELS":
+        adjustment -= 4
+        reason = "Price is compressed between support and resistance. Confidence reduced."
+
+    adjusted_confidence = max(0, min(100, confidence + adjustment))
+
+    return {
+        "confidence": adjusted_confidence,
+        "support_resistance_bonus": adjustment,
+        "support_resistance_reason": reason,
+        "support_resistance_status": status,
+        "distance_to_support": distance_to_support,
+        "distance_to_resistance": distance_to_resistance,
     }
 
 def generate_live_signal(market_data):
