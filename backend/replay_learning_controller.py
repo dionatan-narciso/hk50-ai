@@ -1,19 +1,27 @@
-import os
-import pandas as pd
 from datetime import datetime
 
-CONTROL_FILE = "data/replay/replay_learning_control.csv"
+import pandas as pd
+
+from app.runtime_paths import resolve_runtime_paths
+
+
+def _control_file():
+    """Resolve replay controller state at call time for test/deployment isolation."""
+
+    return resolve_runtime_paths().replay_learning_control
 
 
 def ensure_control_folder():
-    os.makedirs("data/replay", exist_ok=True)
+    _control_file().parent.mkdir(parents=True, exist_ok=True)
 
 
 def load_control_history():
-    if not os.path.exists(CONTROL_FILE):
+    control_file = _control_file()
+
+    if not control_file.exists():
         return pd.DataFrame()
 
-    return pd.read_csv(CONTROL_FILE)
+    return pd.read_csv(control_file)
 
 
 def get_current_learning_strength():
@@ -94,6 +102,6 @@ def record_replay_control_result(
 
     history = load_control_history()
     history = pd.concat([history, pd.DataFrame([row])], ignore_index=True)
-    history.to_csv(CONTROL_FILE, index=False)
+    history.to_csv(_control_file(), index=False)
 
     return row
