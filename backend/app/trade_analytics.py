@@ -1,17 +1,11 @@
 import pandas as pd
-import os
 
-TRADE_FILE = "data/trade_journal.csv"
+from app.paper_trade_journal_repository import load_paper_trade_journal
 
 
 def run_trade_analytics():
 
-    if not os.path.exists(TRADE_FILE):
-        return {
-            "total_trades": 0
-        }
-
-    df = pd.read_csv(TRADE_FILE)
+    df = load_paper_trade_journal()
 
     if df.empty:
         return {
