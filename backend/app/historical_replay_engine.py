@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 import yfinance as yf
 
@@ -6,26 +5,17 @@ from app.market_regime_detector import detect_market_regime
 from app.strategy_executor import execute_strategy
 from app.strategy_rotation_engine import rotate_strategy
 from app.utils.trade_context import calculate_trade_context
+from app.replay_journal_repository import (
+    append_replay_trade,
+    get_replay_journal_path,
+    reset_replay_journal,
+)
 
 from replay_penalty_engine import get_replay_penalty
 from replay_learning_controller import record_replay_control_result
 from app.entry_context_scoring import calculate_entry_context_score
 
 from app.entry_learning_memory import (update_entry_weights_after_replay)
-
-
-REPLAY_DIR = "data/replay"
-REPLAY_TRADES_FILE = f"{REPLAY_DIR}/replay_trade_journal.csv"
-
-
-def ensure_replay_folder():
-    os.makedirs(REPLAY_DIR, exist_ok=True)
-
-
-def reset_replay_files():
-    ensure_replay_folder()
-    if os.path.exists(REPLAY_TRADES_FILE):
-        os.remove(REPLAY_TRADES_FILE)
 
 
 def calculate_rsi(series, period=14):
@@ -99,18 +89,6 @@ def get_replay_research_context():
         "confidence_label": "Replay",
         "director_available": True,
     }
-
-
-def save_replay_trade(trade):
-    ensure_replay_folder()
-
-    if os.path.exists(REPLAY_TRADES_FILE):
-        df = pd.read_csv(REPLAY_TRADES_FILE)
-        df = pd.concat([df, pd.DataFrame([trade])], ignore_index=True)
-    else:
-        df = pd.DataFrame([trade])
-
-    df.to_csv(REPLAY_TRADES_FILE, index=False)
 
 
 def get_adaptive_replay_settings(atr_percent):
@@ -233,8 +211,7 @@ def run_ai_replay_decision(market_snapshot):
 
 
 def run_historical_replay(period="1y", interval="1h", entry_weights_override=None):
-    ensure_replay_folder()
-    reset_replay_files()
+    reset_replay_journal()
 
     df = load_hk50_history(period=period, interval=interval)
 
@@ -425,7 +402,7 @@ def run_historical_replay(period="1y", interval="1h", entry_weights_override=Non
                     "rsi_slope": open_position.get("rsi_slope"),
                 }
 
-                save_replay_trade(trade)
+                append_replay_trade(trade)
                 trades.append(trade)
                 open_position = None
 
@@ -475,6 +452,6 @@ def run_historical_replay(period="1y", interval="1h", entry_weights_override=Non
         "entry_learning": entry_learning,
         "blocked_by_learning": blocked_by_learning,
         "learning_controller": control_result,
-        "output_file": REPLAY_TRADES_FILE,
+        "output_file": str(get_replay_journal_path()),
         "note": "AI replay sandbox V2 completed with Stage 26 adaptive entry weight tuning support."
     }
