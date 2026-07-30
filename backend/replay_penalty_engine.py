@@ -1,8 +1,7 @@
-import os
 import pandas as pd
-from replay_learning_controller import get_current_learning_strength
 
-REPLAY_MEMORY = "data/replay/replay_learning_memory.csv"
+from app.runtime_paths import resolve_runtime_paths
+from replay_learning_controller import get_current_learning_strength
 
 
 def get_replay_penalty(
@@ -11,14 +10,16 @@ def get_replay_penalty(
     volatility_regime=None,
     rotation_changed=None
 ):
-    if not os.path.exists(REPLAY_MEMORY):
+    replay_memory = resolve_runtime_paths().replay_learning_memory
+
+    if not replay_memory.exists():
         return {
             "penalty_available": False,
             "total_adjustment": 0,
             "reasons": ["No replay learning memory found."]
         }
 
-    df = pd.read_csv(REPLAY_MEMORY)
+    df = pd.read_csv(replay_memory)
 
     learning_strength = get_current_learning_strength()
 
