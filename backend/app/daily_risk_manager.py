@@ -1,15 +1,10 @@
-import os
 from datetime import datetime
-import pandas as pd
 
-TRADE_JOURNAL_FILE = "data/trade_journal.csv"
+from app.paper_trade_journal_repository import load_paper_trade_journal
 
 
 def get_today_trades():
-    if not os.path.exists(TRADE_JOURNAL_FILE):
-        return []
-
-    df = pd.read_csv(TRADE_JOURNAL_FILE)
+    df = load_paper_trade_journal()
 
     if df.empty or "closed_at" not in df.columns:
         return []
