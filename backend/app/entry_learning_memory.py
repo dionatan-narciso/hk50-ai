@@ -1,7 +1,14 @@
 import os
+from pathlib import Path
+
 import pandas as pd
 
-ENTRY_MEMORY_FILE = "data/entry_learning_memory.csv"
+from app.runtime_paths import resolve_runtime_paths
+
+
+# Legacy paper path remains the default for live/paper callers in Batch 1B.
+# Migrating paper state requires a separate, explicit compatibility batch.
+ENTRY_MEMORY_FILE = Path("data/entry_learning_memory.csv")
 
 
 DEFAULT_ENTRY_WEIGHTS = {
@@ -14,29 +21,27 @@ DEFAULT_ENTRY_WEIGHTS = {
 }
 
 
-def ensure_entry_memory():
-    os.makedirs("data", exist_ok=True)
-
-    if (
-        not os.path.exists(ENTRY_MEMORY_FILE)
-        or os.path.getsize(ENTRY_MEMORY_FILE) == 0
-    ):
-        pd.DataFrame([DEFAULT_ENTRY_WEIGHTS]).to_csv(
-            ENTRY_MEMORY_FILE,
-            index=False
-        )
+def _normalize_memory_file(memory_file=None):
+    return Path(memory_file) if memory_file is not None else ENTRY_MEMORY_FILE
 
 
-def load_entry_weights():
-    ensure_entry_memory()
+def ensure_entry_memory(memory_file=None):
+    target = _normalize_memory_file(memory_file)
+    target.parent.mkdir(parents=True, exist_ok=True)
+
+    if not target.exists() or target.stat().st_size == 0:
+        pd.DataFrame([DEFAULT_ENTRY_WEIGHTS]).to_csv(target, index=False)
+
+    return target
+
+
+def load_entry_weights(memory_file=None):
+    target = ensure_entry_memory(memory_file)
 
     try:
-        df = pd.read_csv(ENTRY_MEMORY_FILE)
+        df = pd.read_csv(target)
     except Exception:
-        pd.DataFrame([DEFAULT_ENTRY_WEIGHTS]).to_csv(
-            ENTRY_MEMORY_FILE,
-            index=False
-        )
+        pd.DataFrame([DEFAULT_ENTRY_WEIGHTS]).to_csv(target, index=False)
         return DEFAULT_ENTRY_WEIGHTS.copy()
 
     if df.empty:
@@ -50,17 +55,21 @@ def load_entry_weights():
     }
 
 
-def save_entry_weights(weights):
-    os.makedirs("data", exist_ok=True)
+def save_entry_weights(weights, memory_file=None):
+    target = _normalize_memory_file(memory_file)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame([weights]).to_csv(target, index=False)
 
-    pd.DataFrame([weights]).to_csv(
-        ENTRY_MEMORY_FILE,
-        index=False
+
+def update_entry_weights_after_replay(win_rate, average_return, memory_file=None):
+    """Update replay-local entry weights without touching paper state."""
+
+    target = (
+        Path(memory_file)
+        if memory_file is not None
+        else resolve_runtime_paths().replay_entry_learning_memory
     )
-
-
-def update_entry_weights_after_replay(win_rate, average_return):
-    weights = load_entry_weights()
+    weights = load_entry_weights(target)
 
     decision = "KEEP"
 
@@ -86,11 +95,12 @@ def update_entry_weights_after_replay(win_rate, average_return):
         )
         decision = "WEAKEN"
 
-    save_entry_weights(weights)
+    save_entry_weights(weights, target)
 
     return {
         "decision": decision,
         "entry_weights": weights,
         "win_rate": win_rate,
         "average_return": average_return,
+        "memory_file": str(target),
     }
