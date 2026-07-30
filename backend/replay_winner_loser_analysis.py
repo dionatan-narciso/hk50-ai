@@ -1,7 +1,6 @@
-import os
 import pandas as pd
 
-REPLAY_FILE = "data/replay/replay_trade_journal.csv"
+from app.runtime_paths import resolve_runtime_paths
 
 
 def safe_average(df, column):
@@ -12,11 +11,12 @@ def safe_average(df, column):
 
 
 def analyze_winners_vs_losers():
+    replay_file = resolve_runtime_paths().replay_trade_journal
 
-    if not os.path.exists(REPLAY_FILE):
+    if not replay_file.exists():
         return {"status": "no_replay_data"}
 
-    df = pd.read_csv(REPLAY_FILE)
+    df = pd.read_csv(replay_file)
 
     if len(df) == 0:
         return {"status": "empty_replay"}
