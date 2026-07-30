@@ -1,17 +1,17 @@
 import pandas as pd
+import os
 
-from app.runtime_paths import resolve_runtime_paths
+TRADE_FILE = "data/trade_journal.csv"
 
 
 def run_trade_analytics():
-    trade_file = resolve_runtime_paths().paper_trade_journal
 
-    if not trade_file.exists():
+    if not os.path.exists(TRADE_FILE):
         return {
             "total_trades": 0
         }
 
-    df = pd.read_csv(trade_file)
+    df = pd.read_csv(TRADE_FILE)
 
     if df.empty:
         return {
