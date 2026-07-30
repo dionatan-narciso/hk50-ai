@@ -8,6 +8,7 @@ from app.quality_performance_memory import update_quality_performance_memory
 from app.regime_performance_memory import update_regime_memory
 from app.confidence_calibration_memory import update_confidence_calibration
 from app.daily_risk_manager import check_daily_risk_limits
+from app.paper_trade_journal_repository import append_paper_trade
 from app.runtime_paths import resolve_runtime_paths
 from app.utils.trade_context import calculate_trade_context
 
@@ -291,6 +292,7 @@ def run_automatic_signal_tracker(
                 "rsi_slope": open_position.get("rsi_slope"),
             }
 
+            append_paper_trade(closed_trade)
             save_trade_function(closed_trade)
 
             update_live_strategy_memory(
