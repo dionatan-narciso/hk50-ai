@@ -1,17 +1,18 @@
-import os
 import pandas as pd
 
-REPLAY_TRADES_FILE = "data/replay/replay_trade_journal.csv"
+from app.runtime_paths import resolve_runtime_paths
 
 
 def get_historical_replay_summary():
-    if not os.path.exists(REPLAY_TRADES_FILE):
+    replay_trades_file = resolve_runtime_paths().replay_trade_journal
+
+    if not replay_trades_file.exists():
         return {
             "status": "empty",
             "reason": "No replay trades found yet."
         }
 
-    df = pd.read_csv(REPLAY_TRADES_FILE)
+    df = pd.read_csv(replay_trades_file)
 
     if df.empty:
         return {
