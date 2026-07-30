@@ -1,7 +1,6 @@
-import os
 import pandas as pd
 
-REPLAY_JOURNAL = "data/replay/replay_trade_journal.csv"
+from app.runtime_paths import resolve_runtime_paths
 
 
 def _safe_rate(wins, trades):
@@ -36,13 +35,15 @@ def _summarise_group(df, group_col):
 
 
 def get_replay_analytics():
-    if not os.path.exists(REPLAY_JOURNAL):
+    replay_journal = resolve_runtime_paths().replay_trade_journal
+
+    if not replay_journal.exists():
         return {
             "status": "no_replay_data",
             "message": "No replay trade journal found yet."
         }
 
-    df = pd.read_csv(REPLAY_JOURNAL)
+    df = pd.read_csv(replay_journal)
 
     if df.empty:
         return {
