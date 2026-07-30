@@ -1,7 +1,6 @@
-import os
 import pandas as pd
 
-REPLAY_FILE = "data/replay/replay_trade_journal.csv"
+from app.runtime_paths import resolve_runtime_paths
 
 
 def _safe_rate(wins, trades):
@@ -11,10 +10,12 @@ def _safe_rate(wins, trades):
 
 
 def analyze_replay_exit_reasons():
-    if not os.path.exists(REPLAY_FILE):
+    replay_file = resolve_runtime_paths().replay_trade_journal
+
+    if not replay_file.exists():
         return {"status": "no_replay_data"}
 
-    df = pd.read_csv(REPLAY_FILE)
+    df = pd.read_csv(replay_file)
 
     if df.empty:
         return {"status": "empty_replay"}
