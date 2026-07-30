@@ -32,9 +32,11 @@ from app.research_engine import (
     run_research_memory,
     run_walk_forward_lab,
     run_research_director,
+)
+from app.paper_trade_journal_repository import (
     save_trade_journal_entry,
     run_trade_journal,
-    run_live_learning_feed
+    run_live_learning_feed as run_canonical_live_learning_feed,
 )
 
 from app.live_signal_engine import generate_live_signal
@@ -68,7 +70,6 @@ app.add_middleware(
 )
 
 
-
 @app.get("/api/replay-penalty-test")
 def replay_penalty_test(
     strategy: str = "RSI < 30",
@@ -83,50 +84,61 @@ def replay_penalty_test(
         rotation_changed=rotation_changed
     )
 
+
 @app.get("/api/replay-exit-reason-analysis")
 def replay_exit_reason_analysis():
     return analyze_replay_exit_reasons()
+
 
 @app.get("/api/adaptive-entry-weight-tuner")
 def adaptive_entry_weight_tuner():
     return tune_entry_weights(run_historical_replay)
 
+
 @app.get("/api/replay-winner-loser-analysis")
 def replay_winner_loser_analysis():
     return analyze_winners_vs_losers()
+
 
 @app.get("/api/trade-context-analytics")
 def trade_context_analytics():
     return get_trade_context_analytics()
 
+
 @app.get("/api/replay-exit-analysis")
 def replay_exit_analysis():
     return analyze_replay_exits()
+
 
 @app.get("/api/build-replay-learning-memory")
 def build_replay_memory():
     return build_replay_learning_memory()
 
+
 @app.get("/api/replay-analytics")
 def replay_analytics():
     return get_replay_analytics()
+
 
 @app.get("/api/historical-replay-summary")
 def historical_replay_summary():
     return get_historical_replay_summary()
 
+
 @app.get("/api/historical-replay")
 def historical_replay():
     return run_historical_replay(period="1y", interval="1h")
 
+
 @app.get("/")
 def home():
     return {"message": "HK50 AI Backend is running"}
-  
+
 
 @app.get("/api/trade-analytics")
 def trade_analytics():
     return run_trade_analytics()
+
 
 @app.get("/api/market-summary")
 def market_summary():
@@ -218,6 +230,7 @@ def market_summary():
             "auto_refresh": "30s",
         }
 
+
 @app.get("/api/candles")
 def get_candles():
     try:
@@ -254,25 +267,31 @@ def get_candles():
 def strategy_lab():
     return run_strategy_lab()
 
+
 @app.get("/api/parameter-lab")
 def parameter_lab():
     return run_parameter_lab()
+
 
 @app.get("/api/evolution-lab")
 def evolution_lab():
     return run_evolution_lab()
 
+
 @app.get("/api/research-memory")
 def research_memory():
     return run_research_memory()
+
 
 @app.get("/api/walk-forward-lab")
 def walk_forward_lab():
     return run_walk_forward_lab()
 
+
 @app.get("/api/research-director")
 def research_director():
     return run_research_director()
+
 
 @app.get("/api/trade-journal")
 def trade_journal():
@@ -295,32 +314,19 @@ def add_trade_journal_entry(
         notes=notes
     )
 
+
 @app.get("/api/live-learning-feed")
-def live_learning_feed(): 
-    return run_live_learning_feed()
+def live_learning_feed():
+    return run_canonical_live_learning_feed(run_research_director)
+
 
 @app.get("/api/automatic-signal-tracker")
 def automatic_signal_tracker():
     market_data = market_summary()
     live_signal = generate_live_signal(market_data)
 
-    active_strategy = live_signal.get("strategy_name", "Automatic Signal Tracker")
-
     current_price = float(str(market_data.get("price", 0)).replace(",", ""))
     atr_percent = market_data.get("atr_percent", 1.5)
-
-    def save_closed_trade_to_journal(trade):
-        return save_trade_journal_entry(
-            strategy=active_strategy,
-            direction=trade.get("signal", ""),
-            entry_price=float(trade.get("entry_price", 0)),
-            exit_price=float(trade.get("exit_price", 0)),
-            notes=(
-                f"Result: {trade.get('result', '')} | "
-                f"Return: {trade.get('return_percent', '')}% | "
-                f"Strategy: {active_strategy}"
-            )
-        )
 
     tracker_result = run_automatic_signal_tracker(
         symbol="HK50",
@@ -328,7 +334,7 @@ def automatic_signal_tracker():
         signal=live_signal.get("signal", "HOLD"),
         confidence=live_signal.get("confidence", 50),
         reason=live_signal.get("reason", "No reason provided"),
-        save_trade_function=save_closed_trade_to_journal,
+        save_trade_function=lambda trade: trade,
         atr_percent=atr_percent,
         vote_signal=live_signal.get("vote_signal", "UNKNOWN"),
         vote_strength=live_signal.get("vote_strength", 0),
@@ -343,6 +349,7 @@ def automatic_signal_tracker():
         "live_signal": live_signal,
         "tracker_result": tracker_result
     }
+
 
 @app.get("/api/ai-execution-engine")
 def ai_execution_engine():
@@ -375,102 +382,83 @@ def ai_execution_engine():
         tracker_status["tracker_status"] = "ACTIVE"
 
     return {
-    "strategy": live_signal.get("strategy_used"),
-    "raw_signal": live_signal.get("raw_strategy_signal"),
-    "final_signal": live_signal.get("signal"),
-
-    "confidence": live_signal.get("confidence"),
-    "market_confidence": live_signal.get("market_confidence"),
-    "research_confidence": live_signal.get("director_confidence"),
-
-    "position_size": position_size,
-
-    "quality": live_signal.get(
-        "quality",
-        position_size.get("quality", "UNKNOWN")
-    ),
-
-    "quality_analytics_bonus": live_signal.get(
-        "quality_analytics_bonus",
-        0
-    ),
-
-    "quality_analytics_reason": live_signal.get(
-        "quality_analytics_reason",
-        "No quality learning data yet"
-    ),
-
-    "strategy_performance_bonus": live_signal.get(
-        "strategy_performance_bonus",
-        0
-    ),
-
-    "strategy_performance_reason": live_signal.get(
-        "strategy_performance_reason",
-        "No strategy performance data yet"
-    ),
-
-    "reason": live_signal.get("reason"),
-
+        "strategy": live_signal.get("strategy_used"),
+        "raw_signal": live_signal.get("raw_strategy_signal"),
+        "final_signal": live_signal.get("signal"),
+        "confidence": live_signal.get("confidence"),
+        "market_confidence": live_signal.get("market_confidence"),
+        "research_confidence": live_signal.get("director_confidence"),
+        "position_size": position_size,
+        "quality": live_signal.get(
+            "quality",
+            position_size.get("quality", "UNKNOWN")
+        ),
+        "quality_analytics_bonus": live_signal.get(
+            "quality_analytics_bonus",
+            0
+        ),
+        "quality_analytics_reason": live_signal.get(
+            "quality_analytics_reason",
+            "No quality learning data yet"
+        ),
+        "strategy_performance_bonus": live_signal.get(
+            "strategy_performance_bonus",
+            0
+        ),
+        "strategy_performance_reason": live_signal.get(
+            "strategy_performance_reason",
+            "No strategy performance data yet"
+        ),
+        "reason": live_signal.get("reason"),
         "market_regime": live_signal.get("market_regime"),
-    "volatility_regime": live_signal.get("volatility_regime"),
-    "preferred_strategies": live_signal.get("preferred_strategies", []),
-    "blocked_strategies": live_signal.get("blocked_strategies", []),
+        "volatility_regime": live_signal.get("volatility_regime"),
+        "preferred_strategies": live_signal.get("preferred_strategies", []),
+        "blocked_strategies": live_signal.get("blocked_strategies", []),
+        "regime_bonus": live_signal.get("regime_bonus", 0),
+        "regime_bonus_reason": live_signal.get("regime_bonus_reason"),
+        "rotation_selected_strategy": live_signal.get("rotation_selected_strategy"),
+        "rotation_original_strategy": live_signal.get("rotation_original_strategy"),
+        "rotation_changed_strategy": live_signal.get("rotation_changed_strategy"),
+        "rotation_reason": live_signal.get("rotation_reason"),
+        "rotation_scores": live_signal.get("rotation_scores", []),
+        "open_position": tracker_status["open_position"],
+        "tracker_status": tracker_status["tracker_status"],
+        "trade_analytics_reason": live_signal.get(
+            "trade_analytics_reason",
+            "Not available"
+        ),
+        "strategy_vote": live_signal.get(
+            "strategy_vote",
+            {}
+        ),
+        "vote_signal": live_signal.get(
+            "vote_signal",
+            "UNKNOWN"
+        ),
+        "vote_strength": live_signal.get(
+            "vote_strength",
+            0
+        ),
+        "total_votes": live_signal.get(
+            "total_votes",
+            0
+        ),
+        "voting_assist_reason": live_signal.get(
+            "voting_assist_reason",
+            "Not available"
+        ),
+        "peak_profit_percent": (
+            open_position_data.get("peak_profit_percent", 0)
+            if open_position_data
+            else 0
+        ),
+        "trailing_active": (
+            open_position_data.get("trailing_active", False)
+            if open_position_data
+            else False
+        ),
+    }
 
-    "regime_bonus": live_signal.get("regime_bonus", 0),
-    "regime_bonus_reason": live_signal.get("regime_bonus_reason"),
-
-    "rotation_selected_strategy": live_signal.get("rotation_selected_strategy"),
-    "rotation_original_strategy": live_signal.get("rotation_original_strategy"),
-    "rotation_changed_strategy": live_signal.get("rotation_changed_strategy"),
-    "rotation_reason": live_signal.get("rotation_reason"),
-    "rotation_scores": live_signal.get("rotation_scores", []),
-
-    "open_position": tracker_status["open_position"],
-    "tracker_status": tracker_status["tracker_status"],
-
-    "trade_analytics_reason": live_signal.get(
-        "trade_analytics_reason",
-        "Not available"
-    ),
-
-    "strategy_vote": live_signal.get(
-        "strategy_vote",
-        {}
-    ),
-
-    "vote_signal": live_signal.get(
-        "vote_signal",
-        "UNKNOWN"
-    ),
-
-    "vote_strength": live_signal.get(
-        "vote_strength",
-        0
-    ),
-
-    "total_votes": live_signal.get(
-        "total_votes",
-        0
-    ),
-
-    "voting_assist_reason": live_signal.get(
-        "voting_assist_reason",
-        "Not available"
-    ),
-
-    "peak_profit_percent": (
-        open_position_data.get("peak_profit_percent", 0)
-        if open_position_data
-        else 0
-    ),
-
-    "trailing_active": (
-        open_position_data.get("trailing_active", False)
-        if open_position_data
-        else False
-    ),
-}
 
 @app.get("/api/live-performance-memory")
 def live_performance_memory():
@@ -488,6 +476,7 @@ def live_performance_memory():
             "strategies": []
         }
 
+
 @app.get("/api/test-live-memory")
 def test_live_memory():
     from app.live_performance_memory import update_live_strategy_memory
@@ -502,6 +491,7 @@ def test_live_memory():
         "strategy": "RSI<30",
         "return": 0.55
     }
+
 
 @app.get("/api/open-position")
 def open_position():
@@ -524,17 +514,21 @@ def open_position():
         position_size=position_size.get("position_size_label")
     )
 
+
 @app.get("/api/equity-curve")
 def equity_curve():
     return run_equity_curve()
+
 
 @app.get("/api/voting-performance-memory")
 def voting_performance_memory():
     return summarise_voting_performance()
 
+
 @app.get("/api/live-strategy-performance")
 def live_strategy_performance():
     return summarise_live_strategy_performance()
+
 
 @app.get("/api/test-open-buy")
 def test_open_buy():
@@ -637,19 +631,19 @@ def test_close_position():
     }
 
     save_trade_journal_entry(
-    strategy=closed_trade.get("reason", "Manual Test"),
-    direction=closed_trade["signal"],
-    entry_price=closed_trade["entry_price"],
-    exit_price=closed_trade["exit_price"],
-    confidence=closed_trade.get("confidence"),
-    vote_signal=closed_trade.get("vote_signal"),
-    vote_strength=closed_trade.get("vote_strength"),
-    total_votes=closed_trade.get("total_votes"),
-    raw_signal=closed_trade.get("raw_signal"),
-    final_signal=closed_trade.get("signal"),
-    result=closed_trade.get("result"),
-    notes="Manual test close"
-)
+        strategy=closed_trade.get("reason", "Manual Test"),
+        direction=closed_trade["signal"],
+        entry_price=closed_trade["entry_price"],
+        exit_price=closed_trade["exit_price"],
+        confidence=closed_trade.get("confidence"),
+        vote_signal=closed_trade.get("vote_signal"),
+        vote_strength=closed_trade.get("vote_strength"),
+        total_votes=closed_trade.get("total_votes"),
+        raw_signal=closed_trade.get("raw_signal"),
+        final_signal=closed_trade.get("signal"),
+        result=closed_trade.get("result"),
+        notes="Manual test close"
+    )
 
     update_live_strategy_memory(
         strategy_name=closed_trade.get("reason", "Manual Test"),
@@ -681,6 +675,7 @@ def test_reset_position():
         "status": "reset",
         "message": "Open test position cleared"
     }
+
 
 @app.get("/api/test-simulate-price")
 def test_simulate_price(price: float = Query(...)):
@@ -796,6 +791,7 @@ def test_simulate_price(price: float = Query(...)):
         "trailing_active": trailing_active,
         "position": open_position
     }
+
 
 @app.get("/api/quality-performance-summary")
 def quality_performance_summary():
