@@ -1,10 +1,9 @@
 import csv
-import os
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 
-MEMORY_FILE = "data/entry_learning_memory.csv"
-TUNING_FILE = "data/entry_weight_tuning_log.csv"
+from app.runtime_paths import resolve_runtime_paths
 
 
 DEFAULT_WEIGHTS = {
@@ -17,12 +16,23 @@ DEFAULT_WEIGHTS = {
 }
 
 
-def load_entry_weights():
-    if not os.path.exists(MEMORY_FILE):
+def _replay_files():
+    paths = resolve_runtime_paths()
+    return (
+        paths.replay_entry_learning_memory,
+        paths.replay_entry_weight_tuning_log,
+    )
+
+
+def load_entry_weights(memory_file=None):
+    default_memory_file, _ = _replay_files()
+    target = Path(memory_file) if memory_file is not None else default_memory_file
+
+    if not target.exists():
         return DEFAULT_WEIGHTS.copy()
 
-    with open(MEMORY_FILE, "r", newline="") as f:
-        rows = list(csv.DictReader(f))
+    with target.open("r", newline="") as file_handle:
+        rows = list(csv.DictReader(file_handle))
 
     if not rows:
         return DEFAULT_WEIGHTS.copy()
@@ -36,10 +46,18 @@ def load_entry_weights():
     return weights
 
 
-def save_entry_weights(weights, decision, win_rate, average_return):
-    os.makedirs("data", exist_ok=True)
+def save_entry_weights(
+    weights,
+    decision,
+    win_rate,
+    average_return,
+    memory_file=None,
+):
+    default_memory_file, _ = _replay_files()
+    target = Path(memory_file) if memory_file is not None else default_memory_file
+    target.parent.mkdir(parents=True, exist_ok=True)
 
-    file_exists = os.path.exists(MEMORY_FILE)
+    file_exists = target.exists()
 
     fieldnames = [
         "timestamp",
@@ -54,8 +72,8 @@ def save_entry_weights(weights, decision, win_rate, average_return):
         "extreme_rsi_penalty",
     ]
 
-    with open(MEMORY_FILE, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+    with target.open("a", newline="") as file_handle:
+        writer = csv.DictWriter(file_handle, fieldnames=fieldnames)
 
         if not file_exists:
             writer.writeheader()
@@ -69,10 +87,20 @@ def save_entry_weights(weights, decision, win_rate, average_return):
         })
 
 
-def log_tuning_result(weight_name, old_value, new_value, decision, base_result, test_result):
-    os.makedirs("data", exist_ok=True)
+def log_tuning_result(
+    weight_name,
+    old_value,
+    new_value,
+    decision,
+    base_result,
+    test_result,
+    tuning_file=None,
+):
+    _, default_tuning_file = _replay_files()
+    target = Path(tuning_file) if tuning_file is not None else default_tuning_file
+    target.parent.mkdir(parents=True, exist_ok=True)
 
-    file_exists = os.path.exists(TUNING_FILE)
+    file_exists = target.exists()
 
     fieldnames = [
         "timestamp",
@@ -86,8 +114,8 @@ def log_tuning_result(weight_name, old_value, new_value, decision, base_result, 
         "test_average_return",
     ]
 
-    with open(TUNING_FILE, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+    with target.open("a", newline="") as file_handle:
+        writer = csv.DictWriter(file_handle, fieldnames=fieldnames)
 
         if not file_exists:
             writer.writeheader()
