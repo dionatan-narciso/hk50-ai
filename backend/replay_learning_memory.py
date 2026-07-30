@@ -1,8 +1,14 @@
-import os
 import pandas as pd
 
-REPLAY_JOURNAL = "data/replay/replay_trade_journal.csv"
-REPLAY_MEMORY = "data/replay/replay_learning_memory.csv"
+from app.runtime_paths import resolve_runtime_paths
+
+
+def _replay_journal():
+    return resolve_runtime_paths().replay_trade_journal
+
+
+def _replay_memory():
+    return resolve_runtime_paths().replay_learning_memory
 
 
 def _safe_rate(wins, trades):
@@ -37,16 +43,18 @@ def _score_from_performance(win_rate, avg_return, trades):
 
 
 def build_replay_learning_memory():
-    if not os.path.exists(REPLAY_JOURNAL):
+    replay_journal = _replay_journal()
+    replay_memory = _replay_memory()
+
+    if not replay_journal.exists():
         return {"status": "no_replay_data"}
 
-    df = pd.read_csv(REPLAY_JOURNAL)
+    df = pd.read_csv(replay_journal)
 
     if df.empty:
         return {"status": "empty"}
 
     rows = []
-
     groups = [
         ["strategy"],
         ["strategy", "market_regime"],
@@ -82,12 +90,12 @@ def build_replay_learning_memory():
             })
 
     memory_df = pd.DataFrame(rows)
-    os.makedirs("data/replay", exist_ok=True)
-    memory_df.to_csv(REPLAY_MEMORY, index=False)
+    replay_memory.parent.mkdir(parents=True, exist_ok=True)
+    memory_df.to_csv(replay_memory, index=False)
 
     return {
         "status": "completed",
-        "memory_file": REPLAY_MEMORY,
+        "memory_file": str(replay_memory),
         "rows_created": len(memory_df),
         "learning_memory": rows,
     }
