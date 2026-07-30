@@ -8,11 +8,13 @@ from app.quality_performance_memory import update_quality_performance_memory
 from app.regime_performance_memory import update_regime_memory
 from app.confidence_calibration_memory import update_confidence_calibration
 from app.daily_risk_manager import check_daily_risk_limits
+from app.runtime_paths import resolve_runtime_paths
 from app.utils.trade_context import calculate_trade_context
 
 
-OPEN_POSITION_FILE = "data/open_position.csv"
-LAST_SIGNAL_FILE = "data/last_signal.csv"
+def _paper_state_paths():
+    paths = resolve_runtime_paths()
+    return paths.paper_open_position, paths.paper_last_signal
 
 
 def get_adaptive_trailing_settings(atr_percent):
@@ -25,10 +27,12 @@ def get_adaptive_trailing_settings(atr_percent):
 
 
 def load_open_position():
-    if not os.path.exists(OPEN_POSITION_FILE):
+    open_position_file, _ = _paper_state_paths()
+
+    if not os.path.exists(open_position_file):
         return None
 
-    df = pd.read_csv(OPEN_POSITION_FILE)
+    df = pd.read_csv(open_position_file)
     if df.empty:
         return None
 
@@ -36,20 +40,25 @@ def load_open_position():
 
 
 def save_open_position(position):
-    os.makedirs("data", exist_ok=True)
-    pd.DataFrame([position]).to_csv(OPEN_POSITION_FILE, index=False)
+    open_position_file, _ = _paper_state_paths()
+    open_position_file.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame([position]).to_csv(open_position_file, index=False)
 
 
 def clear_open_position():
-    if os.path.exists(OPEN_POSITION_FILE):
-        os.remove(OPEN_POSITION_FILE)
+    open_position_file, _ = _paper_state_paths()
+
+    if os.path.exists(open_position_file):
+        os.remove(open_position_file)
 
 
 def load_last_signal():
-    if not os.path.exists(LAST_SIGNAL_FILE):
+    _, last_signal_file = _paper_state_paths()
+
+    if not os.path.exists(last_signal_file):
         return None
 
-    df = pd.read_csv(LAST_SIGNAL_FILE)
+    df = pd.read_csv(last_signal_file)
     if df.empty:
         return None
 
@@ -57,12 +66,13 @@ def load_last_signal():
 
 
 def save_last_signal(signal):
-    os.makedirs("data", exist_ok=True)
+    _, last_signal_file = _paper_state_paths()
+    last_signal_file.parent.mkdir(parents=True, exist_ok=True)
 
     pd.DataFrame([{
         "signal": signal,
         "updated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }]).to_csv(LAST_SIGNAL_FILE, index=False)
+    }]).to_csv(last_signal_file, index=False)
 
 
 def run_automatic_signal_tracker(
@@ -197,17 +207,13 @@ def run_automatic_signal_tracker(
             move_percent = move_percent * -1
 
         peak_profit_percent = float(open_position.get("peak_profit_percent", 0))
-
         trailing_active = str(open_position.get("trailing_active", False)) == "True"
-
         activation_threshold = float(
             open_position.get("trailing_activation", activation_threshold)
         )
-
         pullback_threshold = float(
             open_position.get("trailing_pullback", pullback_threshold)
         )
-
         atr_percent_at_entry = float(
             open_position.get("atr_percent_at_entry", atr_percent or 1.5)
         )
@@ -274,7 +280,6 @@ def run_automatic_signal_tracker(
                 "quality": open_position.get("quality", "UNKNOWN"),
                 "market_regime": open_position.get("market_regime", "UNKNOWN"),
                 "volatility_regime": open_position.get("volatility_regime", "UNKNOWN"),
-
                 "close_at_entry": open_position.get("close_at_entry"),
                 "ma20_at_entry": open_position.get("ma20_at_entry"),
                 "ma50_at_entry": open_position.get("ma50_at_entry"),
