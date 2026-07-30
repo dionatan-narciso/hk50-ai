@@ -1,16 +1,15 @@
+import os
 from datetime import datetime
 import pandas as pd
 
-from app.runtime_paths import resolve_runtime_paths
+TRADE_JOURNAL_FILE = "data/trade_journal.csv"
 
 
 def get_today_trades():
-    trade_journal_file = resolve_runtime_paths().paper_trade_journal
-
-    if not trade_journal_file.exists():
+    if not os.path.exists(TRADE_JOURNAL_FILE):
         return []
 
-    df = pd.read_csv(trade_journal_file)
+    df = pd.read_csv(TRADE_JOURNAL_FILE)
 
     if df.empty or "closed_at" not in df.columns:
         return []
