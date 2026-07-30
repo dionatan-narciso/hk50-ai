@@ -1,21 +1,10 @@
-import os
-import pandas as pd
+from app.paper_trade_journal_repository import load_paper_trade_journal
 
-TRADE_JOURNAL_FILE = "data/trade_journal.csv"
 STARTING_EQUITY = 10000
 
 
 def run_equity_curve():
-    if not os.path.exists(TRADE_JOURNAL_FILE):
-        return {
-            "starting_equity": STARTING_EQUITY,
-            "current_equity": STARTING_EQUITY,
-            "total_return": 0,
-            "max_drawdown": 0,
-            "equity_history": []
-        }
-
-    df = pd.read_csv(TRADE_JOURNAL_FILE)
+    df = load_paper_trade_journal()
 
     if df.empty or "result_pct" not in df.columns:
         return {
