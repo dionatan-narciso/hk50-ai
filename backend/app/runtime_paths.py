@@ -1,7 +1,7 @@
 """Central runtime path definitions for HK50 AI.
 
-Batch 1A introduces the path contract only. Existing trading modules are not
-migrated in this batch, so trading behaviour remains unchanged.
+Runtime state is separated by execution mode so replay, paper and future live
+trading cannot silently share mutable files.
 """
 
 from dataclasses import dataclass
@@ -27,6 +27,7 @@ class RuntimePaths:
     paper_open_position: Path
     paper_last_signal: Path
     paper_entry_learning_memory: Path
+    paper_voting_performance_memory: Path
 
     replay_trade_journal: Path
     replay_learning_memory: Path
@@ -63,6 +64,7 @@ def resolve_runtime_paths(data_root: str | Path | None = None) -> RuntimePaths:
         paper_open_position=paper_dir / "open_position.csv",
         paper_last_signal=paper_dir / "last_signal.csv",
         paper_entry_learning_memory=paper_dir / "entry_learning_memory.csv",
+        paper_voting_performance_memory=paper_dir / "voting_performance_memory.csv",
         replay_trade_journal=replay_dir / "replay_trade_journal.csv",
         replay_learning_memory=replay_dir / "replay_learning_memory.csv",
         replay_learning_control=replay_dir / "replay_learning_control.csv",
