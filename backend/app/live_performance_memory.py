@@ -1,27 +1,40 @@
-import os
 import pandas as pd
 
-PERFORMANCE_FILE = "data/live_strategy_performance.csv"
+from app.runtime_paths import resolve_runtime_paths
+
+
+COLUMNS = [
+    "strategy",
+    "wins",
+    "losses",
+    "total_trades",
+    "win_rate",
+    "average_return",
+]
+
+
+def get_strategy_performance_path():
+    return resolve_runtime_paths().paper_strategy_performance_memory
 
 
 def ensure_performance_file():
-    os.makedirs("data", exist_ok=True)
+    performance_file = get_strategy_performance_path()
+    performance_file.parent.mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists(PERFORMANCE_FILE):
-        pd.DataFrame(columns=[
-            "strategy",
-            "wins",
-            "losses",
-            "total_trades",
-            "win_rate",
-            "average_return"
-        ]).to_csv(PERFORMANCE_FILE, index=False)
+    if not performance_file.exists():
+        pd.DataFrame(columns=COLUMNS).to_csv(performance_file, index=False)
+
+    return performance_file
+
+
+def load_live_strategy_performance():
+    performance_file = ensure_performance_file()
+    return pd.read_csv(performance_file)
 
 
 def update_live_strategy_memory(strategy_name, trade_return):
-    ensure_performance_file()
-
-    df = pd.read_csv(PERFORMANCE_FILE)
+    performance_file = ensure_performance_file()
+    df = pd.read_csv(performance_file)
 
     existing = df[df["strategy"] == strategy_name]
 
@@ -35,13 +48,10 @@ def update_live_strategy_memory(strategy_name, trade_return):
             "losses": losses,
             "total_trades": 1,
             "win_rate": 100 if wins else 0,
-            "average_return": trade_return
+            "average_return": trade_return,
         }
 
-        df = pd.concat(
-            [df, pd.DataFrame([new_row])],
-            ignore_index=True
-        )
+        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
 
     else:
         idx = existing.index[0]
@@ -49,7 +59,6 @@ def update_live_strategy_memory(strategy_name, trade_return):
         wins = int(df.loc[idx, "wins"])
         losses = int(df.loc[idx, "losses"])
         total = int(df.loc[idx, "total_trades"])
-
         avg_return = float(df.loc[idx, "average_return"])
 
         if trade_return > 0:
@@ -58,10 +67,7 @@ def update_live_strategy_memory(strategy_name, trade_return):
             losses += 1
 
         total += 1
-
-        avg_return = (
-            (avg_return * (total - 1)) + trade_return
-        ) / total
+        avg_return = ((avg_return * (total - 1)) + trade_return) / total
 
         df.loc[idx, "wins"] = wins
         df.loc[idx, "losses"] = losses
@@ -69,19 +75,18 @@ def update_live_strategy_memory(strategy_name, trade_return):
         df.loc[idx, "win_rate"] = round((wins / total) * 100, 2)
         df.loc[idx, "average_return"] = round(avg_return, 3)
 
-    df.to_csv(PERFORMANCE_FILE, index=False)
+    df.to_csv(performance_file, index=False)
+
 
 def summarise_live_strategy_performance():
-    ensure_performance_file()
-
-    df = pd.read_csv(PERFORMANCE_FILE)
+    df = load_live_strategy_performance()
 
     if df.empty:
         return {
             "total_strategies": 0,
             "strategies": [],
             "best_live_strategy": None,
-            "best_live_score": 0
+            "best_live_score": 0,
         }
 
     strategies = []
@@ -98,7 +103,7 @@ def summarise_live_strategy_performance():
 
         live_score = round(
             trade_count_score + win_rate_score + return_score,
-            2
+            2,
         )
 
         strategies.append({
@@ -108,13 +113,13 @@ def summarise_live_strategy_performance():
             "total_trades": total_trades,
             "win_rate": win_rate,
             "average_return": average_return,
-            "live_score": live_score
+            "live_score": live_score,
         })
 
     strategies = sorted(
         strategies,
         key=lambda x: x["live_score"],
-        reverse=True
+        reverse=True,
     )
 
     best = strategies[0] if strategies else None
@@ -123,12 +128,12 @@ def summarise_live_strategy_performance():
         "total_strategies": len(strategies),
         "strategies": strategies,
         "best_live_strategy": best["strategy"] if best else None,
-        "best_live_score": best["live_score"] if best else 0
+        "best_live_score": best["live_score"] if best else 0,
     }
+
 
 def get_strategy_performance_bonus(strategy_name):
     summary = summarise_live_strategy_performance()
-
     strategies = summary.get("strategies", [])
 
     for strategy in strategies:
@@ -146,7 +151,7 @@ def get_strategy_performance_bonus(strategy_name):
                     "total_trades": total_trades,
                     "win_rate": win_rate,
                     "average_return": average_return,
-                    "live_score": live_score
+                    "live_score": live_score,
                 }
 
             bonus = 0
@@ -169,7 +174,7 @@ def get_strategy_performance_bonus(strategy_name):
                 "total_trades": total_trades,
                 "win_rate": win_rate,
                 "average_return": average_return,
-                "live_score": live_score
+                "live_score": live_score,
             }
 
     return {
@@ -179,5 +184,5 @@ def get_strategy_performance_bonus(strategy_name):
         "total_trades": 0,
         "win_rate": 0,
         "average_return": 0,
-        "live_score": 0
+        "live_score": 0,
     }
