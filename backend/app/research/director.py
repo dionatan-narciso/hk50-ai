@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Mapping, Sequence
 
 from app.live_performance_memory import load_live_strategy_performance
+from app.research.candidate_ranker import rank_strategy_candidates
 from app.research.live_performance import rank_live_performance
 from app.research_engine import (
     run_evolution_lab,
@@ -14,22 +15,6 @@ from app.research_engine import (
     run_walk_forward_lab,
 )
 from app.trade_analytics import run_trade_analytics
-
-
-def _analytics_bonus(strategy_name: str, rows: Sequence[Mapping[str, Any]]) -> int:
-    for row in rows:
-        if row.get("strategy") != strategy_name:
-            continue
-        average_return = float(row.get("average_return", 0))
-        trades = int(row.get("trades", 0))
-        if trades >= 5:
-            if average_return > 0.5:
-                return 10
-            if average_return > 0:
-                return 5
-            if average_return < 0:
-                return -5
-    return 0
 
 
 def build_research_director_result(
@@ -60,63 +45,19 @@ def build_research_director_result(
     best_live_strategy = live_context["best_live_strategy"]
     live_score = live_context["live_score"]
 
-    strategy_candidates: list[dict[str, Any]] = []
-
-    def add_candidate(strategy_name: str | None, source: str, research_score: int, live_bonus: int = 0) -> None:
-        if not strategy_name:
-            return
-        analytics_bonus = _analytics_bonus(strategy_name, strategy_analytics)
-        strategy_candidates.append({
-            "strategy": strategy_name,
-            "source": source,
-            "research_score": research_score,
-            "live_bonus": live_bonus,
-            "analytics_bonus": analytics_bonus,
-            "final_score": research_score + live_bonus + analytics_bonus,
-        })
-
-    if memory_best_strategy:
-        add_candidate(
-            memory_best_strategy.get("strategy") if isinstance(memory_best_strategy, dict) else memory_best_strategy,
-            "Research Memory",
-            35,
-        )
-    if best_strategy_lab:
-        add_candidate(best_strategy_lab.get("strategy"), "Strategy Lab", 30)
-    if best_parameter_lab:
-        add_candidate(best_parameter_lab.get("parameter"), "Parameter Lab", 28)
-    if best_evolution_lab:
-        add_candidate(best_evolution_lab.get("strategy"), "Evolution Lab", 32)
-    if best_walk_forward:
-        robustness = best_walk_forward.get("robustness", "UNKNOWN")
-        wf_score = 35 if robustness == "PASS" else 22 if robustness == "UNSTABLE" else 10 if robustness == "FAIL" else 5
-        add_candidate(best_walk_forward.get("strategy"), "Walk Forward Lab", wf_score)
-    if best_live_strategy:
-        add_candidate(best_live_strategy.get("strategy"), "Live Performance Memory", 20, live_score)
-
-    if strategy_candidates:
-        strategy_candidates = sorted(strategy_candidates, key=lambda row: row["final_score"], reverse=True)
-        selected_strategy = strategy_candidates[0]
-        best_strategy = selected_strategy["strategy"]
-        if best_live_strategy:
-            live_total_trades = int(best_live_strategy.get("total_trades", 0))
-            live_win_rate = float(best_live_strategy.get("win_rate", 0))
-            live_avg_return = float(best_live_strategy.get("average_return", 0))
-            live_strategy_name = best_live_strategy.get("strategy")
-            live_analytics_bonus = _analytics_bonus(live_strategy_name, strategy_analytics)
-            if live_total_trades >= 10 and live_win_rate >= 60 and live_avg_return > 0 and live_score >= 25:
-                selected_strategy = {
-                    "strategy": live_strategy_name,
-                    "source": "Live Performance Override",
-                    "research_score": 20,
-                    "live_bonus": live_score,
-                    "analytics_bonus": live_analytics_bonus,
-                    "final_score": 20 + live_score + live_analytics_bonus,
-                }
-                best_strategy = live_strategy_name
-    else:
-        selected_strategy = None
-        best_strategy = memory_best_strategy
+    candidate_result = rank_strategy_candidates(
+        memory_best_strategy=memory_best_strategy,
+        best_strategy_lab=best_strategy_lab,
+        best_parameter_lab=best_parameter_lab,
+        best_evolution_lab=best_evolution_lab,
+        best_walk_forward=best_walk_forward,
+        best_live_strategy=best_live_strategy,
+        live_score=live_score,
+        strategy_analytics=strategy_analytics,
+    )
+    strategy_candidates = candidate_result["strategy_candidates"]
+    selected_strategy = candidate_result["selected_strategy"]
+    best_strategy = candidate_result["best_strategy"]
 
     score = 0
     for best in (best_strategy_lab, best_parameter_lab, best_evolution_lab):
