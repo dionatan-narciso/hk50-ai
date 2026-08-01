@@ -1,4 +1,4 @@
-from app.research_engine import run_research_director
+from app.research.director import run_research_director
 from app.strategy_executor import execute_strategy
 from app.strategy_voting_engine import run_strategy_vote
 from app.voting_performance_memory import get_vote_strength_win_rate

@@ -25,14 +25,8 @@ from app.voting_performance_memory import (
     save_voting_result
 )
 
-from app.research_engine import (
-    run_strategy_lab,
-    run_parameter_lab,
-    run_evolution_lab,
-    run_research_memory,
-    run_walk_forward_lab,
-    run_research_director,
-)
+from app.research.director import run_research_director
+
 from app.paper_trade_journal_repository import (
     save_trade_journal_entry,
     run_trade_journal,
