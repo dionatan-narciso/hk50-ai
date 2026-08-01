@@ -8,6 +8,7 @@ from app.live_performance_memory import load_live_strategy_performance
 from app.research.candidate_ranker import rank_strategy_candidates
 from app.research.confidence_scorer import score_research_confidence
 from app.research.live_performance import rank_live_performance
+from app.research.recommendation_builder import build_research_recommendations
 from app.research_engine import (
     run_evolution_lab,
     run_parameter_lab,
@@ -71,27 +72,15 @@ def build_research_director_result(
     confidence_score = confidence["confidence_score"]
     confidence_label = confidence["confidence_label"]
 
-    recommendations: list[str] = []
-    if selected_strategy:
-        recommendations.append(
-            f"Research Director selected {selected_strategy['strategy']} from {selected_strategy['source']} with final score {selected_strategy['final_score']}."
-        )
-    if selected_strategy and selected_strategy["source"] == "Live Performance Override":
-        recommendations.append("Live performance has enough evidence to override research memory.")
-    if best_parameter_lab:
-        recommendations.append(f"Best parameter result is {best_parameter_lab['parameter']} with {best_parameter_lab['total_return']}% return.")
-    if best_evolution_lab:
-        recommendations.append(f"Best evolved strategy is {best_evolution_lab['strategy']} with {best_evolution_lab['total_return']}% return.")
-    if best_walk_forward:
-        recommendations.append(f"Most robust walk forward result is {best_walk_forward['strategy']} with status {best_walk_forward['robustness']}.")
-    if best_live_strategy:
-        recommendations.append(
-            f"Live paper memory favours {best_live_strategy['strategy']} with {best_live_strategy['win_rate']}% win rate and {best_live_strategy['average_return']}% average return."
-        )
-    if worst_strategy:
-        recommendations.append(f"Avoid or redesign {worst_strategy['strategy']} because it has the weakest saved result.")
-    if confidence_score < 60:
-        recommendations.append("Research confidence is not strong enough yet. Focus on robustness and live paper performance before trusting live signals.")
+    recommendations = build_research_recommendations(
+        selected_strategy=selected_strategy,
+        best_parameter_lab=best_parameter_lab,
+        best_evolution_lab=best_evolution_lab,
+        best_walk_forward=best_walk_forward,
+        best_live_strategy=best_live_strategy,
+        worst_strategy=worst_strategy,
+        confidence_score=confidence_score,
+    )
 
     return {
         "confidence_score": confidence_score,
