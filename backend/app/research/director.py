@@ -6,6 +6,7 @@ from typing import Any, Mapping, Sequence
 
 from app.live_performance_memory import load_live_strategy_performance
 from app.research.candidate_ranker import rank_strategy_candidates
+from app.research.confidence_scorer import score_research_confidence
 from app.research.live_performance import rank_live_performance
 from app.research_engine import (
     run_evolution_lab,
@@ -59,22 +60,16 @@ def build_research_director_result(
     selected_strategy = candidate_result["selected_strategy"]
     best_strategy = candidate_result["best_strategy"]
 
-    score = 0
-    for best in (best_strategy_lab, best_parameter_lab, best_evolution_lab):
-        if best:
-            total_return = best["total_return"]
-            score += 15 if total_return > 3 else 10 if total_return > 1 else 5 if total_return > 0 else 0
-
-    if best_walk_forward:
-        robustness = best_walk_forward["robustness"]
-        score += 25 if robustness == "PASS" else 12 if robustness == "UNSTABLE" else 6 if robustness == "FAIL" else 2
-
-    tests_saved = memory.get("total_tests_saved", 0)
-    score += 10 if tests_saved >= 200 else 7 if tests_saved >= 100 else 5 if tests_saved >= 50 else 3 if tests_saved >= 20 else 0
-    score += live_score
-
-    confidence_score = min(score, 100)
-    confidence_label = "Strong" if confidence_score >= 80 else "Moderate" if confidence_score >= 60 else "Weak" if confidence_score >= 40 else "Very Weak"
+    confidence = score_research_confidence(
+        best_strategy_lab=best_strategy_lab,
+        best_parameter_lab=best_parameter_lab,
+        best_evolution_lab=best_evolution_lab,
+        best_walk_forward=best_walk_forward,
+        total_tests_saved=memory.get("total_tests_saved", 0),
+        live_score=live_score,
+    )
+    confidence_score = confidence["confidence_score"]
+    confidence_label = confidence["confidence_label"]
 
     recommendations: list[str] = []
     if selected_strategy:
