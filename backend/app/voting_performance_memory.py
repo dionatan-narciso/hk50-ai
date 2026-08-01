@@ -1,24 +1,31 @@
-import os
 import csv
 
-VOTING_MEMORY_FILE = "backend/data/voting_performance_memory.csv"
+from app.runtime_paths import resolve_runtime_paths
+
+
+VOTING_MEMORY_COLUMNS = [
+    "vote_signal",
+    "vote_strength",
+    "total_votes",
+    "strategy_signal",
+    "final_signal",
+    "trade_result",
+    "won",
+]
+
+
+def get_voting_memory_file():
+    return resolve_runtime_paths().paper_voting_performance_memory
 
 
 def ensure_voting_memory_file():
-    os.makedirs(os.path.dirname(VOTING_MEMORY_FILE), exist_ok=True)
+    voting_memory_file = get_voting_memory_file()
+    voting_memory_file.parent.mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists(VOTING_MEMORY_FILE):
-        with open(VOTING_MEMORY_FILE, "w", newline="") as file:
+    if not voting_memory_file.exists():
+        with voting_memory_file.open("w", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow([
-                "vote_signal",
-                "vote_strength",
-                "total_votes",
-                "strategy_signal",
-                "final_signal",
-                "trade_result",
-                "won"
-            ])
+            writer.writerow(VOTING_MEMORY_COLUMNS)
 
 
 def save_voting_result(
@@ -30,10 +37,11 @@ def save_voting_result(
     trade_result
 ):
     ensure_voting_memory_file()
+    voting_memory_file = get_voting_memory_file()
 
     won = trade_result > 0
 
-    with open(VOTING_MEMORY_FILE, "a", newline="") as file:
+    with voting_memory_file.open("a", newline="") as file:
         writer = csv.writer(file)
         writer.writerow([
             vote_signal,
@@ -48,10 +56,11 @@ def save_voting_result(
 
 def load_voting_performance_memory():
     ensure_voting_memory_file()
+    voting_memory_file = get_voting_memory_file()
 
     rows = []
 
-    with open(VOTING_MEMORY_FILE, "r") as file:
+    with voting_memory_file.open("r") as file:
         reader = csv.DictReader(file)
 
         for row in reader:
@@ -132,6 +141,7 @@ def summarise_voting_performance():
         "best_vote_strength": best["vote_strength"] if best else None,
         "best_win_rate": best["win_rate"] if best else 0,
     }
+
 
 def get_vote_strength_win_rate(vote_strength):
     memory = summarise_voting_performance()
