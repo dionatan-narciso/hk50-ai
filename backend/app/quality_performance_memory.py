@@ -1,32 +1,38 @@
 import csv
-import os
 
-QUALITY_MEMORY_FILE = "data/quality_performance_memory.csv"
+from app.runtime_paths import resolve_runtime_paths
+
+
+QUALITY_MEMORY_FIELDS = [
+    "quality",
+    "total_trades",
+    "wins",
+    "losses",
+    "avg_return",
+    "best_return",
+    "worst_return",
+]
+
+
+def get_quality_memory_file():
+    return resolve_runtime_paths().paper_quality_performance_memory
 
 
 def ensure_quality_memory_file():
-    os.makedirs("data", exist_ok=True)
+    quality_memory_file = get_quality_memory_file()
+    quality_memory_file.parent.mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists(QUALITY_MEMORY_FILE):
-        with open(QUALITY_MEMORY_FILE, "w", newline="") as file:
+    if not quality_memory_file.exists():
+        with quality_memory_file.open("w", newline="") as file:
             writer = csv.writer(file)
-            writer.writerow([
-                "quality",
-                "total_trades",
-                "wins",
-                "losses",
-                "avg_return",
-                "best_return",
-                "worst_return"
-            ])
+            writer.writerow(QUALITY_MEMORY_FIELDS)
 
 
 def update_quality_performance_memory(quality, trade_return):
     ensure_quality_memory_file()
+    quality_memory_file = get_quality_memory_file()
 
-    rows = []
-
-    with open(QUALITY_MEMORY_FILE, "r", newline="") as file:
+    with quality_memory_file.open("r", newline="") as file:
         reader = csv.DictReader(file)
         rows = list(reader)
 
@@ -65,25 +71,17 @@ def update_quality_performance_memory(quality, trade_return):
             "worst_return": round(trade_return, 3)
         })
 
-    with open(QUALITY_MEMORY_FILE, "w", newline="") as file:
-        fieldnames = [
-            "quality",
-            "total_trades",
-            "wins",
-            "losses",
-            "avg_return",
-            "best_return",
-            "worst_return"
-        ]
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
+    with quality_memory_file.open("w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=QUALITY_MEMORY_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
 
 
 def get_quality_performance_summary():
     ensure_quality_memory_file()
+    quality_memory_file = get_quality_memory_file()
 
-    with open(QUALITY_MEMORY_FILE, "r", newline="") as file:
+    with quality_memory_file.open("r", newline="") as file:
         reader = csv.DictReader(file)
         rows = list(reader)
 
@@ -106,6 +104,7 @@ def get_quality_performance_summary():
         "best_quality": best_quality["quality"],
         "best_quality_avg_return": float(best_quality["avg_return"])
     }
+
 
 def get_quality_analytics_bonus(quality):
     summary = get_quality_performance_summary()
