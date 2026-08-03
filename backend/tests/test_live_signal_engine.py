@@ -214,9 +214,11 @@ class LiveSignalEngineTests(unittest.TestCase):
             quality_bonus=4,
         )
 
-        # 70 base + 10 vote + 5 strategy - 3 regime + 2 calibration + 4 quality.
+        # Before quality analytics: 70 base + 10 vote + 5 strategy - 3 regime
+        # + 2 calibration = 84 (STRONG). The +4 quality bonus then produces 88
+        # and the final EXCEPTIONAL quality.
         self.assertEqual(result["confidence"], 88)
-        self.assertEqual(result["quality_before_analytics"], "EXCEPTIONAL")
+        self.assertEqual(result["quality_before_analytics"], "STRONG")
         self.assertEqual(result["quality"], "EXCEPTIONAL")
         self.assertEqual(result["strategy_performance_bonus"], 5)
         self.assertEqual(result["regime_bonus"], -3)
