@@ -1,22 +1,13 @@
-import os
-import pandas as pd
-
-FILE = "data/regime_performance.csv"
+from app.regime_performance_memory import load_regime_performance
 
 
 def get_regime_bonus(strategy, market_regime, volatility_regime):
-    if not os.path.exists(FILE):
-        return {
-            "regime_bonus": 0,
-            "reason": "No regime performance data yet."
-        }
-
-    df = pd.read_csv(FILE)
+    df = load_regime_performance()
 
     if df.empty:
         return {
             "regime_bonus": 0,
-            "reason": "Regime performance memory is empty."
+            "reason": "No regime performance data yet."
         }
 
     match = df[
