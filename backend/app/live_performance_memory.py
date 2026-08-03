@@ -32,6 +32,18 @@ def load_live_strategy_performance():
     return pd.read_csv(performance_file)
 
 
+def get_live_performance_memory_response():
+    """Return the API response shape using canonical paper strategy memory."""
+    try:
+        return {
+            "strategies": load_live_strategy_performance().to_dict("records")
+        }
+    except Exception:
+        return {
+            "strategies": []
+        }
+
+
 def update_live_strategy_memory(strategy_name, trade_return):
     performance_file = ensure_performance_file()
     df = pd.read_csv(performance_file)
