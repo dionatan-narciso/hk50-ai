@@ -1,14 +1,8 @@
-import os
 from pathlib import Path
 
 import pandas as pd
 
 from app.runtime_paths import resolve_runtime_paths
-
-
-# Legacy paper path remains the default for live/paper callers in Batch 1B.
-# Migrating paper state requires a separate, explicit compatibility batch.
-ENTRY_MEMORY_FILE = Path("data/entry_learning_memory.csv")
 
 
 DEFAULT_ENTRY_WEIGHTS = {
@@ -21,8 +15,15 @@ DEFAULT_ENTRY_WEIGHTS = {
 }
 
 
+def get_paper_entry_memory_path():
+    return resolve_runtime_paths().paper_entry_learning_memory
+
+
 def _normalize_memory_file(memory_file=None):
-    return Path(memory_file) if memory_file is not None else ENTRY_MEMORY_FILE
+    if memory_file is not None:
+        return Path(memory_file)
+
+    return get_paper_entry_memory_path()
 
 
 def ensure_entry_memory(memory_file=None):
