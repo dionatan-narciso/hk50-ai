@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pandas as pd
 
 from app.live_performance_memory import (
+    get_live_performance_memory_response,
     get_strategy_performance_bonus,
     get_strategy_performance_path,
     load_live_strategy_performance,
@@ -48,6 +49,23 @@ class StrategyPerformanceMemoryPathTests(unittest.TestCase):
         paths = resolve_runtime_paths()
         self.assertFalse((paths.replay_dir / "live_strategy_performance.csv").exists())
         self.assertFalse((paths.live_dir / "live_strategy_performance.csv").exists())
+
+    def test_api_response_reads_canonical_paper_memory(self):
+        update_live_strategy_memory("RSI < 30", 0.75)
+
+        response = get_live_performance_memory_response()
+
+        self.assertEqual(list(response), ["strategies"])
+        self.assertEqual(len(response["strategies"]), 1)
+        self.assertEqual(response["strategies"][0]["strategy"], "RSI < 30")
+        self.assertEqual(int(response["strategies"][0]["total_trades"]), 1)
+
+    def test_api_response_preserves_empty_fallback_on_read_error(self):
+        with patch(
+            "app.live_performance_memory.load_live_strategy_performance",
+            side_effect=OSError("unavailable"),
+        ):
+            self.assertEqual(get_live_performance_memory_response(), {"strategies": []})
 
     def test_legacy_file_is_ignored(self):
         legacy = self.data_root / "live_strategy_performance.csv"
