@@ -4,19 +4,11 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-from app.live_performance_memory import load_live_strategy_performance
 from app.research.candidate_ranker import rank_strategy_candidates
 from app.research.confidence_scorer import score_research_confidence
 from app.research.live_performance import rank_live_performance
 from app.research.recommendation_builder import build_research_recommendations
-from app.research_engine import (
-    run_evolution_lab,
-    run_parameter_lab,
-    run_research_memory,
-    run_strategy_lab,
-    run_walk_forward_lab,
-)
-from app.trade_analytics import run_trade_analytics
+from app.research.source_loader import load_research_sources
 
 
 def build_research_director_result(
@@ -104,14 +96,5 @@ def build_research_director_result(
 
 
 def run_research_director() -> dict[str, Any]:
-    """Run the modular Research Director using canonical paper state."""
-    live_df = load_live_strategy_performance()
-    return build_research_director_result(
-        strategy_lab=run_strategy_lab().get("strategies", []),
-        parameter_lab=run_parameter_lab().get("parameter_tests", []),
-        evolution_lab=run_evolution_lab().get("evolution_tests", []),
-        walk_forward=run_walk_forward_lab().get("walk_forward_tests", []),
-        memory=run_research_memory(),
-        analytics=run_trade_analytics(),
-        live_records=live_df.to_dict("records"),
-    )
+    """Load runtime sources and build the modular Research Director result."""
+    return build_research_director_result(**load_research_sources())
