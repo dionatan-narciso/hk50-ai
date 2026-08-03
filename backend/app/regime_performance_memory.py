@@ -1,7 +1,30 @@
-import os
+from pathlib import Path
+
 import pandas as pd
 
-FILE = "data/regime_performance.csv"
+from app.runtime_paths import RUNTIME_PATHS
+
+
+COLUMNS = [
+    "strategy",
+    "market_regime",
+    "volatility_regime",
+    "trades",
+    "wins",
+    "losses",
+    "average_return",
+]
+
+
+def get_regime_performance_path() -> Path:
+    return RUNTIME_PATHS.paper_regime_performance_memory
+
+
+def load_regime_performance() -> pd.DataFrame:
+    path = get_regime_performance_path()
+    if not path.exists():
+        return pd.DataFrame(columns=COLUMNS)
+    return pd.read_csv(path)
 
 
 def update_regime_memory(
@@ -10,20 +33,9 @@ def update_regime_memory(
     volatility_regime,
     trade_return,
 ):
-    os.makedirs("data", exist_ok=True)
-
-    if os.path.exists(FILE):
-        df = pd.read_csv(FILE)
-    else:
-        df = pd.DataFrame(columns=[
-            "strategy",
-            "market_regime",
-            "volatility_regime",
-            "trades",
-            "wins",
-            "losses",
-            "average_return",
-        ])
+    path = get_regime_performance_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    df = load_regime_performance()
 
     mask = (
         (df["strategy"] == strategy)
@@ -62,4 +74,4 @@ def update_regime_memory(
             "average_return": round(trade_return, 3),
         }
 
-    df.to_csv(FILE, index=False)
+    df.to_csv(path, index=False)
