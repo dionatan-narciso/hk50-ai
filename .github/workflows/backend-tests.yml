@@ -38,7 +38,12 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Compile backend
-        run: python -m compileall -q app .
+        run: python -m compileall -q app scripts .
+
+      - name: Check backend environment
+        env:
+          HK50_DATA_DIR: ${{ runner.temp }}/hk50-ai-data
+        run: python scripts/check_environment.py
 
       - name: Run backend tests
         env:
