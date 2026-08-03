@@ -32,6 +32,7 @@ class RuntimePaths:
     paper_strategy_performance_memory: Path
     paper_confidence_calibration_memory: Path
     paper_regime_performance_memory: Path
+    paper_research_results: Path
 
     replay_trade_journal: Path
     replay_learning_memory: Path
@@ -73,6 +74,7 @@ def resolve_runtime_paths(data_root: str | Path | None = None) -> RuntimePaths:
         paper_strategy_performance_memory=paper_dir / "live_strategy_performance.csv",
         paper_confidence_calibration_memory=paper_dir / "confidence_calibration.csv",
         paper_regime_performance_memory=paper_dir / "regime_performance.csv",
+        paper_research_results=paper_dir / "research_results.csv",
         replay_trade_journal=replay_dir / "replay_trade_journal.csv",
         replay_learning_memory=replay_dir / "replay_learning_memory.csv",
         replay_learning_control=replay_dir / "replay_learning_control.csv",
