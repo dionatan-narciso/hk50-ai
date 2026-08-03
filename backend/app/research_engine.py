@@ -4,6 +4,11 @@ import os
 from datetime import datetime
 from app.trade_analytics import run_trade_analytics
 
+from app.research.research_results_repository import (
+    append_research_results,
+    load_research_results,
+)
+
 
 def load_hk50_data():
     ticker = yf.Ticker("^HSI")
@@ -362,9 +367,6 @@ def run_evolution_lab():
     }
 
 def save_research_results(lab_type, results):
-    os.makedirs("data", exist_ok=True)
-
-    file_path = "data/research_results.csv"
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     rows = []
@@ -384,26 +386,19 @@ def save_research_results(lab_type, results):
             "signal": item.get("signal"),
         })
 
-    df = pd.DataFrame(rows)
-
-    if os.path.exists(file_path):
-        df.to_csv(file_path, mode="a", header=False, index=False)
-    else:
-        df.to_csv(file_path, index=False)
+    append_research_results(rows)
 
 
 def run_research_memory():
-    file_path = "data/research_results.csv"
+    df = load_research_results()
 
-    if not os.path.exists(file_path):
+    if df is None:
         return {
             "best_strategy": None,
             "worst_strategy": None,
             "total_tests_saved": 0,
             "message": "No research memory saved yet."
         }
-
-    df = pd.read_csv(file_path)
 
     if df.empty:
         return {

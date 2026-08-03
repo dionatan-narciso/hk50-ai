@@ -9,8 +9,9 @@ from app.open_position_manager import get_open_position_status
 from app.equity_curve import run_equity_curve
 
 from app.live_performance_memory import (
+    get_live_performance_memory_response,
     summarise_live_strategy_performance,
-    update_live_strategy_memory
+    update_live_strategy_memory,
 )
 
 from app.automatic_signal_tracker import (
@@ -456,20 +457,7 @@ def ai_execution_engine():
 
 @app.get("/api/live-performance-memory")
 def live_performance_memory():
-    import pandas as pd
-
-    try:
-        df = pd.read_csv("data/live_strategy_performance.csv")
-
-        return {
-            "strategies": df.to_dict("records")
-        }
-
-    except Exception:
-        return {
-            "strategies": []
-        }
-
+    return get_live_performance_memory_response()
 
 @app.get("/api/test-live-memory")
 def test_live_memory():
