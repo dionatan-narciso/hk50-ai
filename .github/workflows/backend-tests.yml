@@ -45,6 +45,9 @@ jobs:
           HK50_DATA_DIR: ${{ runner.temp }}/hk50-ai-data
         run: python scripts/check_environment.py
 
+      - name: Audit architecture boundaries
+        run: python scripts/audit_architecture.py
+
       - name: Run backend tests
         env:
           HK50_DATA_DIR: ${{ runner.temp }}/hk50-ai-data
