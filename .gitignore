@@ -1,13 +1,52 @@
-﻿__pycache__/
-*.pyc
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
 
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# Frontend dependencies and build output
 node_modules/
 dist/
 build/
+frontend/.vite/
 
+# Runtime-generated trading state
+backend/data/paper/
 backend/data/replay/
+backend/data/live/
 backend/data/*.csv
+backend/data/*.json
 
+# IDE and OS files
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
 
-.env
+# Local tooling
+*.egg-info/
+.eggs/
