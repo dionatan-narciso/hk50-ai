@@ -1,7 +1,6 @@
 import pandas as pd
-import os
 
-REPLAY_FILE = "data/replay/replay_trade_journal.csv"
+from app.replay_journal_repository import get_replay_journal_path
 
 
 def average(values):
@@ -24,14 +23,15 @@ def count_values(series):
 
 
 def get_trade_context_analytics():
+    replay_file = get_replay_journal_path()
 
-    if not os.path.exists(REPLAY_FILE):
+    if not replay_file.exists():
         return {
             "status": "failed",
             "reason": "Replay trade file not found."
         }
 
-    df = pd.read_csv(REPLAY_FILE)
+    df = pd.read_csv(replay_file)
 
     if df.empty:
         return {
