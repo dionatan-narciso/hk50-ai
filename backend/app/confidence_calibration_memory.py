@@ -1,7 +1,22 @@
-import os
+from pathlib import Path
+
 import pandas as pd
 
-FILE = "data/confidence_calibration.csv"
+from app.runtime_paths import RUNTIME_PATHS
+
+
+COLUMNS = [
+    "confidence_bucket",
+    "trades",
+    "wins",
+    "losses",
+    "win_rate",
+    "average_return",
+]
+
+
+def get_confidence_calibration_path() -> Path:
+    return RUNTIME_PATHS.paper_confidence_calibration_memory
 
 
 def get_confidence_bucket(confidence):
@@ -22,22 +37,19 @@ def get_confidence_bucket(confidence):
     return "85_PLUS"
 
 
+def _load_memory() -> pd.DataFrame:
+    path = get_confidence_calibration_path()
+    if not path.exists():
+        return pd.DataFrame(columns=COLUMNS)
+    return pd.read_csv(path)
+
+
 def update_confidence_calibration(confidence, trade_return):
-    os.makedirs("data", exist_ok=True)
+    path = get_confidence_calibration_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
 
     bucket = get_confidence_bucket(confidence)
-
-    if os.path.exists(FILE):
-        df = pd.read_csv(FILE)
-    else:
-        df = pd.DataFrame(columns=[
-            "confidence_bucket",
-            "trades",
-            "wins",
-            "losses",
-            "win_rate",
-            "average_return",
-        ])
+    df = _load_memory()
 
     mask = df["confidence_bucket"] == bucket
 
@@ -77,17 +89,18 @@ def update_confidence_calibration(confidence, trade_return):
             "average_return": round(trade_return, 3),
         }
 
-    df.to_csv(FILE, index=False)
+    df.to_csv(path, index=False)
 
 
 def get_confidence_calibration_bonus(confidence):
-    if not os.path.exists(FILE):
+    path = get_confidence_calibration_path()
+    if not path.exists():
         return {
             "confidence_calibration_bonus": 0,
             "reason": "No confidence calibration data yet."
         }
 
-    df = pd.read_csv(FILE)
+    df = pd.read_csv(path)
 
     if df.empty:
         return {
