@@ -7,6 +7,7 @@ from app.strategies.default_registry import (
     build_execution_strategy_registry,
 )
 from app.strategies.ma_alignment import MaAlignmentStrategy
+from app.strategies.metadata import StrategyMetadata
 from app.strategies.registry import StrategyRegistry
 from app.strategies.resolution import (
     extract_strategy_name,
@@ -26,6 +27,7 @@ __all__ = [
     "RsiPullbackStrategy",
     "Strategy",
     "StrategyDecision",
+    "StrategyMetadata",
     "StrategyRegistry",
     "TrendFollowingStrategy",
     "build_default_strategy_registry",
