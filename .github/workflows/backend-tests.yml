@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - sprint-0-baseline
+      - sprint-1-strategy-plugins
   pull_request:
     branches:
       - main
