@@ -1,16 +1,29 @@
 from app.strategies.contracts import MarketContext, StrategyDecision
-from app.strategy_executor import execute_ma_alignment
+from app.strategies.numbers import clean_number
 
 
 class MaAlignmentStrategy:
-    """Plugin adapter for the existing MA Alignment strategy."""
+    """MA Alignment strategy plugin preserving the established rules."""
 
     @property
     def name(self) -> str:
         return "MA Alignment"
 
     def evaluate(self, context: MarketContext) -> StrategyDecision:
-        signal, reason = execute_ma_alignment(context.data)
+        price = clean_number(context.get("price"))
+        ma20 = clean_number(context.get("ma20"))
+        ma50 = clean_number(context.get("ma50"))
+        risk = context.get("risk", "Medium")
+
+        if price > ma20 > ma50 and risk != "High":
+            signal = "BUY"
+            reason = "MA alignment strategy triggered BUY."
+        elif price < ma20 < ma50 and risk != "High":
+            signal = "SELL"
+            reason = "MA alignment strategy triggered SELL."
+        else:
+            signal = "HOLD"
+            reason = "MA alignment strategy found no strong alignment."
 
         return StrategyDecision(
             strategy=self.name,
