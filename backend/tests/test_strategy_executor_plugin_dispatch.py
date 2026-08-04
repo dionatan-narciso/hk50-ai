@@ -55,7 +55,6 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
             "trend following": "Trend Following",
             "unknown strategy": "Trend Following",
         }
-
         for source_name, expected in cases.items():
             with self.subTest(source_name=source_name):
                 self.assertEqual(resolve_registered_strategy_name(source_name), expected)
@@ -63,19 +62,14 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
     def test_registered_strategy_is_resolved_and_evaluated(self):
         strategy = FakeStrategy("Breakout", signal="SELL", reason="Plugin SELL.")
         registry = FakeRegistry(strategy)
-
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch(
-                "app.strategies.default_registry.build_default_strategy_registry",
-                return_value=registry,
-            ),
+            patch("app.strategy_executor.build_default_strategy_registry", return_value=registry),
         ):
             result = execute_strategy(
                 {"strategy": "Breakout"},
                 {"trend": "Bearish", "confidence": 80},
             )
-
         self.assertEqual(registry.requested_name, "Breakout")
         self.assertEqual(result["signal"], "SELL")
         self.assertEqual(result["strategy_reason"], "Plugin SELL.")
@@ -85,16 +79,11 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
     def test_unknown_strategy_preserves_trend_following_fallback(self):
         strategy = FakeStrategy("Trend Following", signal="HOLD", reason="Fallback.")
         registry = FakeRegistry(strategy)
-
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch(
-                "app.strategies.default_registry.build_default_strategy_registry",
-                return_value=registry,
-            ),
+            patch("app.strategy_executor.build_default_strategy_registry", return_value=registry),
         ):
             result = execute_strategy("Completely Unknown", {"trend": "Neutral"})
-
         self.assertEqual(registry.requested_name, "Trend Following")
         self.assertEqual(result["strategy_reason"], "Fallback.")
 
@@ -103,15 +92,11 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
             "blocked_strategies": ["Breakout"],
             "reason": "Breakouts blocked.",
         }
-
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=blocked_regime),
-            patch(
-                "app.strategies.default_registry.build_default_strategy_registry"
-            ) as build_registry,
+            patch("app.strategy_executor.build_default_strategy_registry") as build_registry,
         ):
             result = execute_strategy("Breakout", {"trend": "Bullish"})
-
         build_registry.assert_not_called()
         self.assertEqual(result["signal"], "HOLD")
         self.assertEqual(
@@ -122,12 +107,9 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
     def test_rsi_30_buy_behavior_is_preserved_without_registry(self):
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch(
-                "app.strategies.default_registry.build_default_strategy_registry"
-            ) as build_registry,
+            patch("app.strategy_executor.build_default_strategy_registry") as build_registry,
         ):
             result = execute_strategy("RSI < 30", {"rsi": 29, "risk": "Medium"})
-
         build_registry.assert_not_called()
         self.assertEqual(result["signal"], "BUY")
         self.assertEqual(result["strategy_reason"], "RSI < 30 strategy triggered BUY.")
@@ -135,12 +117,9 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
     def test_rsi_30_hold_behavior_is_preserved_without_registry(self):
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch(
-                "app.strategies.default_registry.build_default_strategy_registry"
-            ) as build_registry,
+            patch("app.strategy_executor.build_default_strategy_registry") as build_registry,
         ):
             result = execute_strategy("RSI<30", {"rsi": 29, "risk": "High"})
-
         build_registry.assert_not_called()
         self.assertEqual(result["signal"], "HOLD")
         self.assertEqual(
@@ -152,16 +131,11 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
         strategy = FakeStrategy("MA Alignment")
         registry = FakeRegistry(strategy)
         best_strategy = {"strategy": "MA Alignment", "source": "Research Memory"}
-
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch(
-                "app.strategies.default_registry.build_default_strategy_registry",
-                return_value=registry,
-            ),
+            patch("app.strategy_executor.build_default_strategy_registry", return_value=registry),
         ):
             result = execute_strategy(best_strategy, {"price": 100})
-
         self.assertEqual(
             set(result),
             {"strategy_used", "signal", "strategy_reason", "market_regime"},
@@ -169,17 +143,16 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
         self.assertIs(result["strategy_used"], best_strategy)
         self.assertIs(result["market_regime"], CLEAR_REGIME)
 
-    def test_registry_imports_remain_local_to_avoid_adapter_cycle(self):
+    def test_registry_imports_are_top_level_after_cycle_removal(self):
         source_path = Path(__file__).parents[1] / "app" / "strategy_executor.py"
         tree = ast.parse(source_path.read_text(encoding="utf-8"))
-
-        top_level_imports = []
-        for node in tree.body:
-            if isinstance(node, ast.ImportFrom):
-                top_level_imports.append(node.module)
-
-        self.assertNotIn("app.strategies.default_registry", top_level_imports)
-        self.assertNotIn("app.strategies.contracts", top_level_imports)
+        top_level_imports = [
+            node.module
+            for node in tree.body
+            if isinstance(node, ast.ImportFrom)
+        ]
+        self.assertIn("app.strategies.default_registry", top_level_imports)
+        self.assertIn("app.strategies.contracts", top_level_imports)
 
 
 if __name__ == "__main__":
