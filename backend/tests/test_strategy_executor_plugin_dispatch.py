@@ -4,10 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from app.strategies.contracts import StrategyDecision
-from app.strategy_executor import (
-    execute_strategy,
-    resolve_registered_strategy_name,
-)
+from app.strategy_executor import execute_strategy, resolve_registered_strategy_name
 
 
 CLEAR_REGIME = {
@@ -47,6 +44,8 @@ class FakeRegistry:
 class StrategyExecutorPluginDispatchTests(unittest.TestCase):
     def test_existing_aliases_resolve_to_registry_names(self):
         cases = {
+            "rsi < 30": "RSI < 30",
+            "rsi<30": "RSI < 30",
             "rsi pullback": "RSI Pullback",
             "rsi only": "RSI Pullback",
             "moving average": "MA Alignment",
@@ -64,7 +63,7 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
         registry = FakeRegistry(strategy)
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch("app.strategy_executor.build_default_strategy_registry", return_value=registry),
+            patch("app.strategy_executor.build_execution_strategy_registry", return_value=registry),
         ):
             result = execute_strategy(
                 {"strategy": "Breakout"},
@@ -81,7 +80,7 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
         registry = FakeRegistry(strategy)
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch("app.strategy_executor.build_default_strategy_registry", return_value=registry),
+            patch("app.strategy_executor.build_execution_strategy_registry", return_value=registry),
         ):
             result = execute_strategy("Completely Unknown", {"trend": "Neutral"})
         self.assertEqual(registry.requested_name, "Trend Following")
@@ -94,7 +93,7 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
         }
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=blocked_regime),
-            patch("app.strategy_executor.build_default_strategy_registry") as build_registry,
+            patch("app.strategy_executor.build_execution_strategy_registry") as build_registry,
         ):
             result = execute_strategy("Breakout", {"trend": "Bullish"})
         build_registry.assert_not_called()
@@ -104,28 +103,17 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
             "Strategy blocked by market regime. Breakouts blocked.",
         )
 
-    def test_rsi_30_buy_behavior_is_preserved_without_registry(self):
+    def test_rsi_30_uses_execution_registry(self):
+        strategy = FakeStrategy("RSI < 30", signal="BUY", reason="RSI plugin.")
+        registry = FakeRegistry(strategy)
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch("app.strategy_executor.build_default_strategy_registry") as build_registry,
+            patch("app.strategy_executor.build_execution_strategy_registry", return_value=registry),
         ):
             result = execute_strategy("RSI < 30", {"rsi": 29, "risk": "Medium"})
-        build_registry.assert_not_called()
+        self.assertEqual(registry.requested_name, "RSI < 30")
         self.assertEqual(result["signal"], "BUY")
-        self.assertEqual(result["strategy_reason"], "RSI < 30 strategy triggered BUY.")
-
-    def test_rsi_30_hold_behavior_is_preserved_without_registry(self):
-        with (
-            patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch("app.strategy_executor.build_default_strategy_registry") as build_registry,
-        ):
-            result = execute_strategy("RSI<30", {"rsi": 29, "risk": "High"})
-        build_registry.assert_not_called()
-        self.assertEqual(result["signal"], "HOLD")
-        self.assertEqual(
-            result["strategy_reason"],
-            "RSI < 30 strategy found no valid setup.",
-        )
+        self.assertEqual(result["strategy_reason"], "RSI plugin.")
 
     def test_response_contract_is_preserved(self):
         strategy = FakeStrategy("MA Alignment")
@@ -133,7 +121,7 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
         best_strategy = {"strategy": "MA Alignment", "source": "Research Memory"}
         with (
             patch("app.strategy_executor.detect_market_regime", return_value=CLEAR_REGIME),
-            patch("app.strategy_executor.build_default_strategy_registry", return_value=registry),
+            patch("app.strategy_executor.build_execution_strategy_registry", return_value=registry),
         ):
             result = execute_strategy(best_strategy, {"price": 100})
         self.assertEqual(
@@ -143,16 +131,15 @@ class StrategyExecutorPluginDispatchTests(unittest.TestCase):
         self.assertIs(result["strategy_used"], best_strategy)
         self.assertIs(result["market_regime"], CLEAR_REGIME)
 
-    def test_registry_imports_are_top_level_after_cycle_removal(self):
+    def test_resolution_rules_are_imported_not_defined_in_executor(self):
         source_path = Path(__file__).parents[1] / "app" / "strategy_executor.py"
         tree = ast.parse(source_path.read_text(encoding="utf-8"))
-        top_level_imports = [
-            node.module
-            for node in tree.body
-            if isinstance(node, ast.ImportFrom)
-        ]
-        self.assertIn("app.strategies.default_registry", top_level_imports)
-        self.assertIn("app.strategies.contracts", top_level_imports)
+        defined_functions = {
+            node.name for node in tree.body if isinstance(node, ast.FunctionDef)
+        }
+        self.assertNotIn("extract_strategy_name", defined_functions)
+        self.assertNotIn("resolve_registered_strategy_name", defined_functions)
+        self.assertNotIn("is_strategy_blocked_by_regime", defined_functions)
 
 
 if __name__ == "__main__":
