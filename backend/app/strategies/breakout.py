@@ -1,9 +1,12 @@
 from app.strategies.contracts import MarketContext, StrategyDecision
+from app.strategies.metadata import StrategyMetadata
 from app.strategies.numbers import clean_number
 
 
 class BreakoutStrategy:
     """Breakout strategy plugin preserving the established rules."""
+
+    metadata = StrategyMetadata()
 
     @property
     def name(self) -> str:
@@ -24,8 +27,4 @@ class BreakoutStrategy:
             signal = "HOLD"
             reason = "Breakout strategy found no strong breakout."
 
-        return StrategyDecision(
-            strategy=self.name,
-            signal=signal,
-            reason=reason,
-        )
+        return StrategyDecision(strategy=self.name, signal=signal, reason=reason)
