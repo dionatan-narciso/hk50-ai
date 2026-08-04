@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping, Protocol, runtime_checkable
 
+from app.strategies.metadata import StrategyMetadata
+
 
 VALID_SIGNALS = frozenset({"BUY", "SELL", "HOLD"})
 
@@ -56,6 +58,10 @@ class Strategy(Protocol):
 
     @property
     def name(self) -> str:
+        ...
+
+    @property
+    def metadata(self) -> StrategyMetadata:
         ...
 
     def evaluate(self, context: MarketContext) -> StrategyDecision:
