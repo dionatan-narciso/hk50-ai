@@ -13,7 +13,7 @@ Sprint 0 established two architectural rules:
 
 ```text
 hk50-ai/
-├── .github/workflows/          Automated backend tests
+├── .github/workflows/          Automated backend checks and tests
 ├── backend/
 │   ├── app/                    FastAPI application and trading services
 │   │   └── research/           Modular Research Director
@@ -21,6 +21,7 @@ hk50-ai/
 │   │   ├── paper/              Paper-trading state and learning memory
 │   │   ├── replay/             Historical replay state and learning memory
 │   │   └── live/               Reserved for future funded-live state
+│   ├── scripts/                Environment, architecture and dead-code audits
 │   ├── tests/                  Backend regression tests
 │   ├── requirements.txt        Python dependencies
 │   └── replay_*.py             Replay analysis and learning services
@@ -43,7 +44,7 @@ Development startup:
 ```powershell
 cd backend
 .\.venv\Scripts\Activate.ps1
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 The backend exposes API routes for research labs, signal generation, paper tracking, journals, replay, analytics, risk and learning summaries.
@@ -92,6 +93,10 @@ Paper state includes:
 - strategy performance memory
 - voting performance memory
 - quality performance memory
+- confidence calibration memory
+- regime performance memory
+- paper entry-learning memory
+- saved research results
 
 Paper consumers must not read replay files or unscoped legacy files.
 
@@ -135,7 +140,7 @@ Canonical paper journal
 Analytics, equity, learning memories and dashboards
 ```
 
-## Research Director architecture
+## Research architecture
 
 Production imports use:
 
@@ -167,8 +172,9 @@ director.py
 - `confidence_scorer.py`: calculates the Research Director confidence score and label.
 - `recommendation_builder.py`: builds the existing human-readable recommendations.
 - `director.py`: assembles the final response without direct CSV or research-lab I/O.
+- `research_results_repository.py`: owns saved research-lab result persistence.
 
-The legacy Research Director remains in `research_engine.py` as a temporary rollback implementation. Production code must import the modular director.
+`backend/app/research_engine.py` now contains only active research labs, backtest helpers and the research-memory compatibility surface. The obsolete monolithic Research Director and duplicate journal functions have been removed.
 
 ## Paper journal architecture
 
@@ -214,12 +220,14 @@ backend/app/replay_journal_repository.py
 
 Replay readers and specialised analyses resolve the configured replay journal rather than the paper journal. Entry learning and adaptive tuning also resolve replay-scoped memory paths.
 
-## Test and CI architecture
+## Validation and CI architecture
 
-Backend tests:
+Run locally from `backend/`:
 
 ```powershell
-cd backend
+python scripts/check_environment.py
+python scripts/audit_architecture.py
+python scripts/audit_dead_code.py
 python -m unittest discover -s tests -v
 ```
 
@@ -229,7 +237,9 @@ GitHub Actions workflow:
 .github/workflows/backend-tests.yml
 ```
 
-CI installs backend dependencies, compiles Python files and runs the complete unit-test suite with a temporary `HK50_DATA_DIR`, preventing tests from touching committed or operational state.
+CI installs backend dependencies, compiles Python files, validates the environment, audits architecture boundaries, runs the advisory dead-code scan and executes the complete unit-test suite with a temporary `HK50_DATA_DIR`.
+
+The dead-code audit is intentionally advisory. It identifies candidates for human review and fails only for parse errors.
 
 ## Architectural constraints
 
@@ -240,3 +250,4 @@ CI installs backend dependencies, compiles Python files and runs the complete un
 5. Preserve current trading behaviour during architecture-only changes.
 6. Add regression tests before or with each extraction.
 7. Keep `director.py` as orchestration; put deterministic rules in pure modules.
+8. Never delete dead-code candidates without confirming all runtime, API and test references.
