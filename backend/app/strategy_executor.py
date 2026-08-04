@@ -95,6 +95,20 @@ def is_strategy_blocked_by_regime(strategy_name, regime_data):
     return False
 
 
+def resolve_registered_strategy_name(strategy_name):
+    """Map existing research names to the canonical plugin registry names."""
+    if "rsi" in strategy_name or "pullback" in strategy_name:
+        return "RSI Pullback"
+
+    if "ma" in strategy_name or "moving" in strategy_name or "alignment" in strategy_name:
+        return "MA Alignment"
+
+    if "breakout" in strategy_name:
+        return "Breakout"
+
+    return "Trend Following"
+
+
 def execute_strategy(best_strategy, market_data):
     strategy_name = extract_strategy_name(best_strategy)
     regime_data = detect_market_regime(market_data)
@@ -120,21 +134,24 @@ def execute_strategy(best_strategy, market_data):
         else:
             signal = "HOLD"
             reason = "RSI < 30 strategy found no valid setup."
-
-    elif "rsi" in strategy_name or "pullback" in strategy_name:
-        signal, reason = execute_rsi_pullback(market_data)
-
-    elif "ma" in strategy_name or "moving" in strategy_name or "alignment" in strategy_name:
-        signal, reason = execute_ma_alignment(market_data)
-
-    elif "breakout" in strategy_name:
-        signal, reason = execute_breakout(market_data)
-
-    elif "trend" in strategy_name:
-        signal, reason = execute_trend_following(market_data)
-
     else:
-        signal, reason = execute_trend_following(market_data)
+        # Imported at call time to avoid a temporary cycle while plugin adapters
+        # still delegate to the legacy execution functions above.
+        from app.strategies.contracts import MarketContext
+        from app.strategies.default_registry import build_default_strategy_registry
+
+        registry = build_default_strategy_registry()
+        plugin_name = resolve_registered_strategy_name(strategy_name)
+        strategy = registry.get(plugin_name)
+        decision = strategy.evaluate(
+            MarketContext(
+                symbol="HK50",
+                timeframe="1h",
+                data=market_data,
+            )
+        )
+        signal = decision.signal
+        reason = decision.reason
 
     return {
         "strategy_used": best_strategy,
