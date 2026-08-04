@@ -1,16 +1,28 @@
 from app.strategies.contracts import MarketContext, StrategyDecision
-from app.strategy_executor import execute_trend_following
+from app.strategies.numbers import clean_number
 
 
 class TrendFollowingStrategy:
-    """Plugin adapter for the existing Trend Following strategy."""
+    """Trend Following strategy plugin preserving the established rules."""
 
     @property
     def name(self) -> str:
         return "Trend Following"
 
     def evaluate(self, context: MarketContext) -> StrategyDecision:
-        signal, reason = execute_trend_following(context.data)
+        rsi = clean_number(context.get("rsi"), 50)
+        trend = context.get("trend", "")
+        risk = context.get("risk", "Medium")
+
+        if trend == "Bullish" and rsi < 70 and risk != "High":
+            signal = "BUY"
+            reason = "Trend following strategy triggered BUY."
+        elif trend == "Bearish" and rsi > 30 and risk != "High":
+            signal = "SELL"
+            reason = "Trend following strategy triggered SELL."
+        else:
+            signal = "HOLD"
+            reason = "Trend following strategy found no strong setup."
 
         return StrategyDecision(
             strategy=self.name,
