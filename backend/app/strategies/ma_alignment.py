@@ -1,9 +1,12 @@
 from app.strategies.contracts import MarketContext, StrategyDecision
+from app.strategies.metadata import StrategyMetadata
 from app.strategies.numbers import clean_number
 
 
 class MaAlignmentStrategy:
     """MA Alignment strategy plugin preserving the established rules."""
+
+    metadata = StrategyMetadata()
 
     @property
     def name(self) -> str:
@@ -25,8 +28,4 @@ class MaAlignmentStrategy:
             signal = "HOLD"
             reason = "MA alignment strategy found no strong alignment."
 
-        return StrategyDecision(
-            strategy=self.name,
-            signal=signal,
-            reason=reason,
-        )
+        return StrategyDecision(strategy=self.name, signal=signal, reason=reason)
