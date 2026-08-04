@@ -1,20 +1,28 @@
 from app.strategies.contracts import MarketContext, StrategyDecision
-from app.strategy_executor import execute_rsi_pullback
+from app.strategies.numbers import clean_number
 
 
 class RsiPullbackStrategy:
-    """Plugin adapter for the existing RSI Pullback strategy.
-
-    This adapter deliberately delegates to the legacy execution function so the
-    first migration step changes no thresholds, signals, or reason wording.
-    """
+    """RSI Pullback strategy plugin preserving the established rules."""
 
     @property
     def name(self) -> str:
         return "RSI Pullback"
 
     def evaluate(self, context: MarketContext) -> StrategyDecision:
-        signal, reason = execute_rsi_pullback(context.data)
+        rsi = clean_number(context.get("rsi"), 50)
+        trend = context.get("trend", "")
+        risk = context.get("risk", "Medium")
+
+        if trend == "Bullish" and rsi <= 45 and risk != "High":
+            signal = "BUY"
+            reason = "RSI pullback strategy triggered BUY."
+        elif trend == "Bearish" and rsi >= 55 and risk != "High":
+            signal = "SELL"
+            reason = "RSI pullback strategy triggered SELL."
+        else:
+            signal = "HOLD"
+            reason = "RSI pullback strategy found no valid pullback."
 
         return StrategyDecision(
             strategy=self.name,
