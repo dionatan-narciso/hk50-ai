@@ -1,9 +1,12 @@
 from app.strategies.contracts import MarketContext, StrategyDecision
+from app.strategies.metadata import StrategyMetadata
 from app.strategies.numbers import clean_number
 
 
 class Rsi30Strategy:
     """Plugin implementation of the existing RSI < 30 strategy."""
+
+    metadata = StrategyMetadata(voting_eligible=False)
 
     @property
     def name(self) -> str:
