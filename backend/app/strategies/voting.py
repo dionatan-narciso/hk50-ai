@@ -15,7 +15,9 @@ def run_registry_strategy_vote(
     timeframe: str = "1h",
 ) -> dict[str, Any]:
     """Run strategy voting through plugins while preserving the legacy response."""
-    active_registry = registry or build_default_strategy_registry()
+    active_registry = (
+        registry if registry is not None else build_default_strategy_registry()
+    )
     context = MarketContext(
         symbol=symbol,
         timeframe=timeframe,
