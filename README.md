@@ -8,9 +8,10 @@ The current production focus is HK50. The architecture is being prepared for fut
 
 - FastAPI backend and React/Vite frontend
 - Modular Research Director
-- Paper and replay state isolation
-- Canonical paper and replay journals
+- Paper, replay and future live-state separation
+- Canonical runtime repositories and journals
 - Configurable runtime data root
+- Environment, architecture and dead-code audits
 - Automated backend regression tests
 - GitHub Actions backend CI
 
@@ -19,6 +20,7 @@ The current production focus is HK50. The architecture is being prepared for fut
 - [Architecture](docs/ARCHITECTURE.md)
 - [Developer Guide](docs/DEVELOPER_GUIDE.md)
 - [Sprint 0.5 Inventory](docs/SPRINT_0_5_INVENTORY.md)
+- [Sprint 0.5 Baseline](docs/SPRINT_0_5_BASELINE.md)
 
 ## Backend setup
 
@@ -27,8 +29,11 @@ cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python scripts/check_environment.py
+python scripts/audit_architecture.py
+python scripts/audit_dead_code.py
 python -m unittest discover -s tests -v
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 The backend is available at:
@@ -72,16 +77,18 @@ $env:HK50_DATA_DIR = "$PWD\tmp-data"
 
 Paper, replay and future funded-live execution must never share mutable state files.
 
-## Research Director
+## Research architecture
 
-Production code uses:
+Production orchestration lives in:
 
 ```text
 backend/app/research/director.py
 ```
 
-Its responsibilities are decomposed into source loading, live-performance ranking, candidate ranking, confidence scoring and recommendation building. The legacy implementation in `research_engine.py` remains temporarily for rollback and research-lab compatibility.
+Its responsibilities are decomposed into source loading, live-performance ranking, candidate ranking, confidence scoring and recommendation building.
+
+`backend/app/research_engine.py` now contains only the active research labs, backtest helpers and research-memory compatibility surface. The obsolete monolithic director and duplicate journal functions have been removed.
 
 ## Development principle
 
-Architecture and safety come before profitability optimization. Each change should be small, reviewable, tested and behaviour-preserving unless a trading change is explicitly approved.
+Architecture and safety come before profitability optimisation. Each change should be small, reviewable, tested and behaviour-preserving unless a trading change is explicitly approved.
