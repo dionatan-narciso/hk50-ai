@@ -1,70 +1,42 @@
 from app.market_regime_detector import detect_market_regime
+from app.strategies.breakout import BreakoutStrategy
+from app.strategies.contracts import MarketContext
+from app.strategies.default_registry import build_default_strategy_registry
+from app.strategies.ma_alignment import MaAlignmentStrategy
+from app.strategies.numbers import clean_number
+from app.strategies.rsi_pullback import RsiPullbackStrategy
+from app.strategies.trend_following import TrendFollowingStrategy
 
 
-def clean_number(value, default=0):
-    try:
-        if isinstance(value, (int, float)):
-            return float(value)
-        return float(str(value).replace(",", ""))
-    except Exception:
-        return default
+def _execute_plugin(strategy, market_data):
+    decision = strategy.evaluate(
+        MarketContext(
+            symbol="HK50",
+            timeframe="1h",
+            data=market_data,
+        )
+    )
+    return decision.signal, decision.reason
 
 
 def execute_trend_following(market_data):
-    rsi = clean_number(market_data.get("rsi"), 50)
-    trend = market_data.get("trend", "")
-    risk = market_data.get("risk", "Medium")
-
-    if trend == "Bullish" and rsi < 70 and risk != "High":
-        return "BUY", "Trend following strategy triggered BUY."
-
-    if trend == "Bearish" and rsi > 30 and risk != "High":
-        return "SELL", "Trend following strategy triggered SELL."
-
-    return "HOLD", "Trend following strategy found no strong setup."
+    """Compatibility wrapper for existing callers."""
+    return _execute_plugin(TrendFollowingStrategy(), market_data)
 
 
 def execute_rsi_pullback(market_data):
-    rsi = clean_number(market_data.get("rsi"), 50)
-    trend = market_data.get("trend", "")
-    risk = market_data.get("risk", "Medium")
-
-    if trend == "Bullish" and rsi <= 45 and risk != "High":
-        return "BUY", "RSI pullback strategy triggered BUY."
-
-    if trend == "Bearish" and rsi >= 55 and risk != "High":
-        return "SELL", "RSI pullback strategy triggered SELL."
-
-    return "HOLD", "RSI pullback strategy found no valid pullback."
+    """Compatibility wrapper for existing callers."""
+    return _execute_plugin(RsiPullbackStrategy(), market_data)
 
 
 def execute_ma_alignment(market_data):
-    price = clean_number(market_data.get("price"))
-    ma20 = clean_number(market_data.get("ma20"))
-    ma50 = clean_number(market_data.get("ma50"))
-    risk = market_data.get("risk", "Medium")
-
-    if price > ma20 > ma50 and risk != "High":
-        return "BUY", "MA alignment strategy triggered BUY."
-
-    if price < ma20 < ma50 and risk != "High":
-        return "SELL", "MA alignment strategy triggered SELL."
-
-    return "HOLD", "MA alignment strategy found no strong alignment."
+    """Compatibility wrapper for existing callers."""
+    return _execute_plugin(MaAlignmentStrategy(), market_data)
 
 
 def execute_breakout(market_data):
-    trend = market_data.get("trend", "")
-    confidence = clean_number(market_data.get("confidence"), 50)
-    risk = market_data.get("risk", "Medium")
-
-    if trend == "Bullish" and confidence >= 70 and risk != "High":
-        return "BUY", "Breakout strategy triggered BUY."
-
-    if trend == "Bearish" and confidence >= 70 and risk != "High":
-        return "SELL", "Breakout strategy triggered SELL."
-
-    return "HOLD", "Breakout strategy found no strong breakout."
+    """Compatibility wrapper for existing callers."""
+    return _execute_plugin(BreakoutStrategy(), market_data)
 
 
 def extract_strategy_name(best_strategy):
@@ -135,23 +107,10 @@ def execute_strategy(best_strategy, market_data):
             signal = "HOLD"
             reason = "RSI < 30 strategy found no valid setup."
     else:
-        # Imported at call time to avoid a temporary cycle while plugin adapters
-        # still delegate to the legacy execution functions above.
-        from app.strategies.contracts import MarketContext
-        from app.strategies.default_registry import build_default_strategy_registry
-
         registry = build_default_strategy_registry()
         plugin_name = resolve_registered_strategy_name(strategy_name)
         strategy = registry.get(plugin_name)
-        decision = strategy.evaluate(
-            MarketContext(
-                symbol="HK50",
-                timeframe="1h",
-                data=market_data,
-            )
-        )
-        signal = decision.signal
-        reason = decision.reason
+        signal, reason = _execute_plugin(strategy, market_data)
 
     return {
         "strategy_used": best_strategy,
