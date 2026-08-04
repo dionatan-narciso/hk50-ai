@@ -33,6 +33,33 @@ class StrategyRegistry:
     def names(self) -> tuple[str, ...]:
         return tuple(self._strategies)
 
+    def voting_eligible(self) -> tuple[Strategy, ...]:
+        """Return registered strategies that declare voting eligibility."""
+        return tuple(
+            strategy
+            for strategy in self._strategies.values()
+            if strategy.metadata.voting_eligible
+        )
+
+    def compatible(
+        self,
+        symbol: str,
+        timeframe: str,
+        *,
+        voting_only: bool = False,
+    ) -> tuple[Strategy, ...]:
+        """Return strategies declaring support for a market context.
+
+        Capability queries are informational in Sprint 1A.9; existing consumers
+        do not automatically filter their explicit registries yet.
+        """
+        strategies = self.voting_eligible() if voting_only else self.all()
+        return tuple(
+            strategy
+            for strategy in strategies
+            if strategy.metadata.supports(symbol, timeframe)
+        )
+
     def __len__(self) -> int:
         return len(self._strategies)
 
