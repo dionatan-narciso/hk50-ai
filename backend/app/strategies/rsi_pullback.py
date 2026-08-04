@@ -1,9 +1,12 @@
 from app.strategies.contracts import MarketContext, StrategyDecision
+from app.strategies.metadata import StrategyMetadata
 from app.strategies.numbers import clean_number
 
 
 class RsiPullbackStrategy:
     """RSI Pullback strategy plugin preserving the established rules."""
+
+    metadata = StrategyMetadata()
 
     @property
     def name(self) -> str:
