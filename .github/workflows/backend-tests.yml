@@ -6,6 +6,7 @@ on:
       - main
       - sprint-0-baseline
       - sprint-1-strategy-plugins
+      - sprint-1-market-context
   pull_request:
     branches:
       - main
