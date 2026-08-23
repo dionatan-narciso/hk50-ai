@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from app.replay_context_instrumentation import build_replay_context_fields
 from app.runtime_paths import resolve_runtime_paths
 
 
@@ -36,18 +37,27 @@ def reset_replay_journal() -> Path:
 
 
 def append_replay_trade(trade: dict) -> Path:
-    """Append one trade while preserving the existing CSV schema behaviour."""
+    """Append one trade plus informational Sprint 1B research fields.
+
+    Context instrumentation runs only at persistence time, after replay has
+    already decided, opened, and closed the trade. The derived fields therefore
+    cannot alter historical trading behaviour.
+    """
 
     journal_path = ensure_replay_journal_folder()
+    enriched_trade = {
+        **trade,
+        **build_replay_context_fields(trade),
+    }
 
     if journal_path.exists():
         journal = pd.read_csv(journal_path)
         journal = pd.concat(
-            [journal, pd.DataFrame([trade])],
+            [journal, pd.DataFrame([enriched_trade])],
             ignore_index=True,
         )
     else:
-        journal = pd.DataFrame([trade])
+        journal = pd.DataFrame([enriched_trade])
 
     journal.to_csv(journal_path, index=False)
     return journal_path
