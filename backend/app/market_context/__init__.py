@@ -7,6 +7,7 @@ from app.market_context.conditions import (
     classify_volatility,
     derive_market_condition_context,
 )
+from app.market_context.pipeline import build_enriched_market_context
 from app.market_context.sessions import (
     TradingSessionContext,
     derive_trading_session_context,
@@ -32,6 +33,7 @@ __all__ = [
     "MarketStructureContext",
     "TimeframeSnapshot",
     "TradingSessionContext",
+    "build_enriched_market_context",
     "build_market_context",
     "calculate_ma_separation_percent",
     "calculate_signed_distance_percent",
