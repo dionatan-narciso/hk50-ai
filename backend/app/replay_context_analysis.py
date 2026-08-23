@@ -15,6 +15,10 @@ CATEGORICAL_CONTEXT_COLUMNS = (
     "context_price_position",
     "context_ma_alignment",
     "context_nearest_anchor",
+    "context_htf_trend_4h",
+    "context_htf_trend_1d",
+    "context_htf_agreement",
+    "context_htf_aligned_direction",
 )
 
 NUMERIC_CONTEXT_COLUMNS = (
