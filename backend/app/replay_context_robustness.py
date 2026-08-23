@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from app.replay_context_matrix import (
@@ -25,6 +26,12 @@ def _matches_context(df: pd.DataFrame, context: dict[str, str]) -> pd.Series:
     return mask
 
 
+def _split_dataframe(df: pd.DataFrame, folds: int) -> list[pd.DataFrame]:
+    """Split a DataFrame into chronological folds without coercing it to ndarray."""
+    index_partitions = np.array_split(np.arange(len(df)), folds)
+    return [df.iloc[indexes].copy() for indexes in index_partitions if len(indexes)]
+
+
 def _fold_stats(df: pd.DataFrame, context: dict[str, str], folds: int) -> list[dict[str, Any]]:
     matched = df[_matches_context(df, context)].copy()
     if matched.empty:
@@ -34,7 +41,7 @@ def _fold_stats(df: pd.DataFrame, context: dict[str, str], folds: int) -> list[d
         opened = pd.to_datetime(matched["opened_at"], errors="coerce", utc=True)
         matched = matched.assign(_opened=opened).sort_values("_opened", kind="stable")
 
-    partitions = [part for part in __import__("numpy").array_split(matched, folds) if not part.empty]
+    partitions = _split_dataframe(matched, folds)
     rows: list[dict[str, Any]] = []
     for index, part in enumerate(partitions, start=1):
         returns = pd.to_numeric(part["return_percent"], errors="coerce").dropna()
