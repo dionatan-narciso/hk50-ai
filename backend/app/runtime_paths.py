@@ -1,7 +1,7 @@
 """Central runtime path definitions for HK50 AI.
 
-Runtime state is separated by execution mode so replay, paper and future live
-trading cannot silently share mutable files.
+Runtime state is separated by execution mode so replay, validation, paper and
+future live trading cannot silently share mutable files.
 """
 
 from dataclasses import dataclass
@@ -21,6 +21,7 @@ class RuntimePaths:
     data_root: Path
     paper_dir: Path
     replay_dir: Path
+    validation_dir: Path
     live_dir: Path
 
     paper_trade_journal: Path
@@ -40,6 +41,10 @@ class RuntimePaths:
     replay_entry_learning_memory: Path
     replay_entry_weight_tuning_log: Path
 
+    validation_trade_journal: Path
+    validation_candidate_snapshot: Path
+    validation_result_report: Path
+
 
 def resolve_runtime_paths(data_root: str | Path | None = None) -> RuntimePaths:
     """Return normalized runtime paths without creating directories.
@@ -58,12 +63,14 @@ def resolve_runtime_paths(data_root: str | Path | None = None) -> RuntimePaths:
 
     paper_dir = root / "paper"
     replay_dir = root / "replay"
+    validation_dir = root / "validation"
     live_dir = root / "live"
 
     return RuntimePaths(
         data_root=root,
         paper_dir=paper_dir,
         replay_dir=replay_dir,
+        validation_dir=validation_dir,
         live_dir=live_dir,
         paper_trade_journal=paper_dir / "trade_journal.csv",
         paper_open_position=paper_dir / "open_position.csv",
@@ -80,6 +87,9 @@ def resolve_runtime_paths(data_root: str | Path | None = None) -> RuntimePaths:
         replay_learning_control=replay_dir / "replay_learning_control.csv",
         replay_entry_learning_memory=replay_dir / "entry_learning_memory.csv",
         replay_entry_weight_tuning_log=replay_dir / "entry_weight_tuning_log.csv",
+        validation_trade_journal=validation_dir / "validation_trade_journal.csv",
+        validation_candidate_snapshot=validation_dir / "frozen_context_candidates.json",
+        validation_result_report=validation_dir / "validation_result_report.json",
     )
 
 
