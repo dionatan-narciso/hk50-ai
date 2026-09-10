@@ -7,6 +7,7 @@ on:
       - sprint-0-baseline
       - sprint-1-strategy-plugins
       - sprint-1-market-context
+      - sprint-1-oos-validation
   pull_request:
     branches:
       - main
