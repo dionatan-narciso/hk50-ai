@@ -62,11 +62,31 @@ def build_candidate_snapshot(report: dict[str, Any]) -> dict[str, Any]:
     return {**body, "snapshot_sha256": digest}
 
 
+def _validate_snapshot(snapshot: dict[str, Any]) -> None:
+    supplied = snapshot.get("snapshot_sha256")
+    body = {key: value for key, value in snapshot.items() if key != "snapshot_sha256"}
+    expected = hashlib.sha256(
+        json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+    if supplied != expected:
+        raise ValueError("Frozen candidate snapshot integrity check failed")
+
+
 def freeze_candidate_snapshot(report: dict[str, Any]) -> Path:
-    """Persist the frozen hypothesis set only inside the validation namespace."""
+    """Freeze hypotheses once; refuse later content changes during OOS validation."""
     snapshot = build_candidate_snapshot(report)
     path = resolve_runtime_paths().validation_candidate_snapshot
     path.parent.mkdir(parents=True, exist_ok=True)
+
+    if path.exists():
+        existing = json.loads(path.read_text(encoding="utf-8"))
+        _validate_snapshot(existing)
+        if existing.get("snapshot_sha256") != snapshot.get("snapshot_sha256"):
+            raise RuntimeError(
+                "OOS candidate snapshot is already frozen with different content"
+            )
+        return path
+
     path.write_text(json.dumps(snapshot, indent=2, sort_keys=True), encoding="utf-8")
     return path
 
@@ -76,11 +96,5 @@ def load_candidate_snapshot() -> dict[str, Any]:
     if not path.exists():
         raise FileNotFoundError(f"Frozen candidate snapshot not found: {path}")
     snapshot = json.loads(path.read_text(encoding="utf-8"))
-    supplied = snapshot.get("snapshot_sha256")
-    body = {key: value for key, value in snapshot.items() if key != "snapshot_sha256"}
-    expected = hashlib.sha256(
-        json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()
-    if supplied != expected:
-        raise ValueError("Frozen candidate snapshot integrity check failed")
+    _validate_snapshot(snapshot)
     return snapshot
