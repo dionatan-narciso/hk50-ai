@@ -10,6 +10,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.oos_validation.evaluation import evaluate_frozen_candidates
+from app.runtime_paths import resolve_runtime_paths
 
 
 def main() -> None:
@@ -21,9 +22,7 @@ def main() -> None:
         "baseline": report["baseline"],
         "status_counts": report["status_counts"],
         "replay_summary": report["replay_summary"],
-        "result_file": str(
-            BACKEND_ROOT / "data" / "validation" / "validation_result_report.json"
-        ),
+        "result_file": str(resolve_runtime_paths().validation_result_report),
         "note": report["note"],
     }
     print(json.dumps(summary, indent=2, sort_keys=True))
