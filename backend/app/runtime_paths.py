@@ -43,6 +43,8 @@ class RuntimePaths:
 
     validation_trade_journal: Path
     validation_candidate_snapshot: Path
+    validation_market_data: Path
+    validation_dataset_manifest: Path
     validation_result_report: Path
 
 
@@ -89,6 +91,8 @@ def resolve_runtime_paths(data_root: str | Path | None = None) -> RuntimePaths:
         replay_entry_weight_tuning_log=replay_dir / "entry_weight_tuning_log.csv",
         validation_trade_journal=validation_dir / "validation_trade_journal.csv",
         validation_candidate_snapshot=validation_dir / "frozen_context_candidates.json",
+        validation_market_data=validation_dir / "validation_market_data.csv",
+        validation_dataset_manifest=validation_dir / "validation_dataset_manifest.json",
         validation_result_report=validation_dir / "validation_result_report.json",
     )
 
