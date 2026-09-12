@@ -8,7 +8,7 @@ Sprint 1C.3 produced four completed unseen trades. All 26 frozen context hypothe
 
 - The Sprint 1B candidate snapshot remains frozen.
 - Batch 1 is never replaced or extended in place.
-- Later batches begin at or after the prior batch end and may not overlap.
+- Later batches may not overlap.
 - Each batch records the candidate snapshot SHA256 and dataset SHA256.
 - Forward validation must not update replay, paper, or live learning state.
 - Insufficient evidence is not converted into a pass/fail by lowering thresholds.
@@ -32,14 +32,58 @@ Forward batches are registered under `data/validation/forward_batches/registry.j
 
 ## Batch 1
 
-After pulling this sprint and passing tests, register the already-completed first OOS run with:
+The first completed OOS run is registered with:
 
 ```bash
 python scripts/register_oos_batch_1.py
 ```
 
-This command does not download new market data and does not rerun trading. It records the existing frozen dataset/result as Batch 1.
+Batch 1 covers 2026-08-24 08:30 UTC through 2026-09-12 11:00 UTC and contains four completed trades.
 
-## Next implementation stage
+## Sprint 1C.4.2 — Incremental batches
 
-Sprint 1C.4.2 will add acquisition and evaluation of Batch 2+ using only candles after the previous registered batch end, while retaining sufficient pre-window warm-up for indicators. Each batch will be frozen independently before evaluation.
+Later batches use fixed 14-day validation windows. This prevents repeated tiny samples from being frozen simply because validation was checked frequently.
+
+Inspect the next window with:
+
+```bash
+python scripts/inspect_next_oos_batch.py
+```
+
+For the currently registered Batch 1, Batch 2 is:
+
+- start: 2026-09-12 11:00 UTC
+- end / ready-at: 2026-09-26 11:00 UTC
+
+The builder refuses to create Batch 2 before the full window has elapsed.
+
+Once a batch is ready, freeze its market dataset with:
+
+```bash
+python scripts/build_next_oos_batch.py
+```
+
+Each batch is stored independently under `data/validation/forward_batches/<batch-id>/` with its own market dataset, manifest, trade journal and result report.
+
+## Position continuity
+
+Forward batches must not reset the trading path at their boundary. Batch 1 ended with an open position, so later replay reconstructs the trading state from the original OOS execution start while journaling and scoring only trades that close inside the current batch. This permits a trade opened before a batch boundary to close naturally in a later batch without editing earlier evidence.
+
+## Evaluation
+
+After the batch dataset is frozen, run:
+
+```bash
+python scripts/run_next_oos_batch.py
+```
+
+The forward evaluator:
+
+- reconstructs continuous OOS trading state;
+- scores only the new batch;
+- keeps the frozen candidate snapshot unchanged;
+- registers the completed batch only after evaluation;
+- combines Batch 1 and later journals into cumulative candidate evidence;
+- reports PASS / FAIL / INCONCLUSIVE separately from the evidence-maturity ladder.
+
+No production trading behaviour is changed by this process.
