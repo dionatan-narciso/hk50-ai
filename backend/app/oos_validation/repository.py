@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from app.replay_context_instrumentation import build_replay_context_fields
 from app.runtime_paths import resolve_runtime_paths
 
 
@@ -20,10 +21,14 @@ def reset_validation_journal() -> Path:
 
 
 def append_validation_trade(trade: dict) -> Path:
-    """Append one OOS validation trade without touching replay or paper state."""
+    """Append one OOS trade plus informational context in validation storage only."""
     path = get_validation_journal_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    row = pd.DataFrame([dict(trade)])
+    enriched = {
+        **trade,
+        **build_replay_context_fields(trade),
+    }
+    row = pd.DataFrame([enriched])
     if path.exists():
         existing = pd.read_csv(path)
         row = pd.concat([existing, row], ignore_index=True)
