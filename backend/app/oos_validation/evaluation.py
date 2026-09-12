@@ -22,31 +22,21 @@ def _profit_factor(returns: pd.Series) -> float | None:
 
 
 def _metrics(frame: pd.DataFrame) -> dict[str, Any]:
+    empty = {
+        "trades": 0,
+        "wins": 0,
+        "losses": 0,
+        "win_rate": 0.0,
+        "average_return": 0.0,
+        "median_return": 0.0,
+        "total_return": 0.0,
+        "profit_factor": None,
+    }
     if frame.empty:
-        return {
-            "trades": 0,
-            "wins": 0,
-            "losses": 0,
-            "win_rate": 0.0,
-            "average_return": 0.0,
-            "median_return": 0.0,
-            "total_return": 0.0,
-            "profit_factor": None,
-        }
-
+        return empty
     returns = pd.to_numeric(frame["return_percent"], errors="coerce").dropna()
     if returns.empty:
-        return {
-            "trades": 0,
-            "wins": 0,
-            "losses": 0,
-            "win_rate": 0.0,
-            "average_return": 0.0,
-            "median_return": 0.0,
-            "total_return": 0.0,
-            "profit_factor": None,
-        }
-
+        return empty
     wins = int((returns > 0).sum())
     trades = int(len(returns))
     return {
@@ -74,36 +64,42 @@ def _classification(
     *,
     direction: str,
     validation_metrics: dict[str, Any],
+    directional_lift: float,
 ) -> str:
-    trades = int(validation_metrics["trades"])
-    if trades < MIN_OOS_TRADES:
+    if int(validation_metrics["trades"]) < MIN_OOS_TRADES:
         return "INCONCLUSIVE"
 
-    validation_average = float(validation_metrics["average_return"])
+    average = float(validation_metrics["average_return"])
+    profit_factor = validation_metrics["profit_factor"]
     if direction == "POSITIVE":
-        return "PASS" if validation_average > 0 else "FAIL"
-    return "PASS" if validation_average < 0 else "FAIL"
+        if average <= 0 or directional_lift <= 0:
+            return "FAIL"
+        if profit_factor is not None and float(profit_factor) <= 1:
+            return "FAIL"
+        return "PASS"
+
+    if average >= 0 or directional_lift <= 0:
+        return "FAIL"
+    if profit_factor is not None and float(profit_factor) >= 1:
+        return "FAIL"
+    return "PASS"
 
 
-def evaluate_frozen_candidates(
-    *,
-    run_replay: bool = True,
-) -> dict[str, Any]:
+def evaluate_frozen_candidates(*, run_replay: bool = True) -> dict[str, Any]:
     replay_summary = run_oos_validation_replay() if run_replay else None
     paths = resolve_runtime_paths()
-    if not paths.validation_trade_journal.exists():
-        journal = pd.DataFrame()
-    else:
-        journal = pd.read_csv(paths.validation_trade_journal)
-
+    journal = (
+        pd.read_csv(paths.validation_trade_journal)
+        if paths.validation_trade_journal.exists()
+        else pd.DataFrame()
+    )
     snapshot = load_candidate_snapshot()
     baseline = _metrics(journal)
     results = []
 
     for candidate in snapshot.get("candidates", []):
         context = candidate["context"]
-        matched = _matches_context(journal, context)
-        metrics = _metrics(matched)
+        metrics = _metrics(_matches_context(journal, context))
         discovery_average = float(candidate["discovery_average_return"])
         validation_average = float(metrics["average_return"])
         same_sign = (
@@ -122,7 +118,6 @@ def evaluate_frozen_candidates(
             if candidate["direction"] == "POSITIVE"
             else round(baseline_average - validation_average, 3)
         )
-
         results.append(
             {
                 "candidate_id": candidate["candidate_id"],
@@ -134,9 +129,7 @@ def evaluate_frozen_candidates(
                     "win_rate": candidate.get("discovery_win_rate"),
                     "average_return": discovery_average,
                     "profit_factor": candidate.get("discovery_profit_factor"),
-                    "fold_consistency_percent": candidate.get(
-                        "discovery_fold_consistency_percent"
-                    ),
+                    "fold_consistency_percent": candidate.get("discovery_fold_consistency_percent"),
                 },
                 "validation": metrics,
                 "effect_retention_ratio": retention,
@@ -145,6 +138,7 @@ def evaluate_frozen_candidates(
                 "oos_status": _classification(
                     direction=candidate["direction"],
                     validation_metrics=metrics,
+                    directional_lift=directional_lift,
                 ),
             }
         )
@@ -165,7 +159,8 @@ def evaluate_frozen_candidates(
         "replay_summary": replay_summary,
         "note": (
             "Frozen Sprint 1B hypotheses were evaluated without retuning. "
-            "PASS/FAIL requires at least the minimum OOS trade count; smaller samples are INCONCLUSIVE."
+            "PASS requires enough OOS trades, the expected return direction, supportive profit factor, "
+            "and improvement in the expected direction versus the OOS baseline."
         ),
     }
     paths.validation_result_report.parent.mkdir(parents=True, exist_ok=True)
