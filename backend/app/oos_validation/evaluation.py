@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from math import inf
 from typing import Any
 
 import pandas as pd
@@ -18,7 +17,7 @@ def _profit_factor(returns: pd.Series) -> float | None:
     positive = float(returns[returns > 0].sum())
     negative = float(-returns[returns < 0].sum())
     if negative == 0:
-        return inf if positive > 0 else None
+        return None
     return round(positive / negative, 3)
 
 
@@ -74,7 +73,6 @@ def _matches_context(frame: pd.DataFrame, context: dict[str, Any]) -> pd.DataFra
 def _classification(
     *,
     direction: str,
-    discovery_average_return: float,
     validation_metrics: dict[str, Any],
 ) -> str:
     trades = int(validation_metrics["trades"])
@@ -146,7 +144,6 @@ def evaluate_frozen_candidates(
                 "directional_lift_vs_baseline": directional_lift,
                 "oos_status": _classification(
                     direction=candidate["direction"],
-                    discovery_average_return=discovery_average,
                     validation_metrics=metrics,
                 ),
             }
