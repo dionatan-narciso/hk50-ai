@@ -140,8 +140,9 @@ class OosDatasetAcquisitionTests(unittest.TestCase):
         plan = build_default_validation_plan(
             validation_end=datetime(2026, 6, 10, 12, tzinfo=timezone.utc)
         )
+        warmup_start = plan.validation.start - pd.Timedelta(days=2)
         index = pd.date_range(
-            plan.validation.start - pd.Timedelta(days=2),
+            warmup_start,
             plan.validation.end,
             freq="1h",
             inclusive="left",
@@ -161,7 +162,7 @@ class OosDatasetAcquisitionTests(unittest.TestCase):
         manifest = freeze_validation_dataset(
             plan,
             data,
-            (plan.validation.start - pd.Timedelta(days=2)).to_pydatetime(),
+            warmup_start,
         )
 
         self.assertTrue(paths.validation_market_data.exists())
@@ -174,7 +175,7 @@ class OosDatasetAcquisitionTests(unittest.TestCase):
         same = freeze_validation_dataset(
             plan,
             data,
-            (plan.validation.start - pd.Timedelta(days=2)).to_pydatetime(),
+            warmup_start,
         )
         self.assertEqual(same["dataset_sha256"], manifest["dataset_sha256"])
 
@@ -184,7 +185,7 @@ class OosDatasetAcquisitionTests(unittest.TestCase):
             freeze_validation_dataset(
                 plan,
                 changed,
-                (plan.validation.start - pd.Timedelta(days=2)).to_pydatetime(),
+                warmup_start,
             )
 
     def test_invalid_discovery_timestamp_is_rejected(self):
